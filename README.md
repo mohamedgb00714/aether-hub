@@ -1,148 +1,186 @@
 
-# aethermsaid hub (v2.0 Beta)
+<div align="center">
 
-aethermsaid hub is a privacy-first, intelligent cockpit for your digital life. It synchronizes multiple accounts locally and uses AI (Gemini, OpenAI, Anthropic, or local models) to provide clarity across your communications and schedule.
+# aether hub
+
+**Privacy-first, local-only AI-powered personal productivity hub**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Electron](https://img.shields.io/badge/Electron-39-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+
+[Features](#-features) · [Getting Started](#-getting-started) · [Architecture](#-architecture) · [Download](#-download) · [Contributing](#contributing)
+
+</div>
+
+---
+
+aether hub synchronizes multiple accounts (Gmail, Outlook, Slack, WhatsApp, Telegram, Discord, GitHub) and uses AI to generate insights across all your communications and schedule — **entirely on your machine**.
 
 ## 🛡️ Privacy & Security First
 
-aethermsaid hub is built with privacy as its core principle:
-- **Local Storage**: All your messages, emails, and events are stored in a local SQLite database on your machine.
-- **Local Encryption**: Sensitive data and API keys are encrypted using Electron's `safeStorage` API, which leverages your OS's native keychain (Keychain on macOS, Secret Service on Linux, DPAPI on Windows).
-- **Stateless AI Requests**: AI processing is done via stateless requests. Your data is never used for training models or stored permanently on remote servers.
-- **Support for Local AI**: Use **Ollama** or **Local AI** to keep all your data processing entirely on your own hardware.
+- **Local Storage** — All data lives in a local SQLite database on your machine
+- **Local Encryption** — API keys and sensitive data encrypted via Electron `safeStorage` (OS keychain)
+- **Stateless AI** — AI requests are stateless; your data is never used for training
+- **Local AI Support** — Use **Ollama** or **Local AI** to keep everything 100% on your hardware
+- **No Telemetry** — Zero analytics, zero tracking
 
 ## ⚠️ Disclaimer on Third-Party Services
 
-aethermsaid hub integrates with third-party platforms such as **WhatsApp**, **Discord**, and **Telegram** using unofficial automation methods.
+aether hub integrates with third-party platforms such as **WhatsApp**, **Discord**, and **Telegram** using unofficial automation methods.
 
 These integrations:
-*   Are **not affiliated with, endorsed by, or supported by** Meta (WhatsApp), Discord Inc., or Telegram FZ-LLC.
-*   May violate the Terms of Service of these platforms.
-*   May result in **temporary or permanent account restrictions** or bans.
-*   Are provided **for personal, educational, and research purposes only**.
+- Are **not affiliated with, endorsed by, or supported by** Meta (WhatsApp), Discord Inc., or Telegram FZ-LLC
+- May violate the Terms of Service of these platforms
+- May result in **temporary or permanent account restrictions** or bans
+- Are provided **for personal, educational, and research purposes only**
+- Are **disabled by default** via environment variables
 
-By enabling these features, you acknowledge and accept all associated risks. The authors and contributors of aethermsaid hub assume **no responsibility** for account bans, data loss, or policy violations resulting from their use.
+By enabling these features, you acknowledge and accept all associated risks. The authors assume **no responsibility** for account bans, data loss, or policy violations.
 
 ## ✨ Features
-- **Multi-Account Sync**: Gmail, Outlook, Slack, WhatsApp, Telegram, Discord, and more.
-- **Unified Dashboard**: See all your communications and schedule in one place.
-- **AI Digest**: Get a cross-referenced summary of your day.
-- **Intelligence Engine**: Choose your preferred AI provider (Gemini 3, GPT-4o, Claude 3.5, or local models).
-- **Browser Extension**: Access your data and chat with AI directly from your browser.
-- **Floating Widgets**: System-wide microphone and notes overlays for ultimate productivity.
+
+| Category | Details |
+|----------|---------|
+| **Multi-Account Sync** | Gmail, Outlook, Slack, WhatsApp, Telegram, Discord, GitHub |
+| **Unified Dashboard** | All communications and schedule in one place |
+| **AI Intelligence Engine** | Gemini, OpenAI, Anthropic, OpenRouter, Ollama, Local AI |
+| **AI Digest** | Cross-referenced daily summary of all accounts |
+| **LangChain Agent** | 26+ database tools for deep conversational AI |
+| **Knowledge Base** | Save, organize, and get AI insights from your content |
+| **Automations** | Scheduled browser automation with browser-use |
+| **Watch System** | Cross-platform monitoring with AI action generation |
+| **Browser Extension** | Chrome (MV3) & Firefox (MV2) sidebar with AI chat |
+| **Floating Widgets** | System-wide microphone overlay and sticky notes |
+| **Email Campaigns** | Resend integration for email sending and campaigns |
+| **YouTube Analysis** | Channel tracking, RSS feeds, transcript extraction |
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- [Node.js](https://nodejs.org/) (v18 or later)
-- [pnpm](https://pnpm.io/) (v9 or later)
-- Chrome or Chromium installed (required for WhatsApp integration)
+
+- [Node.js](https://nodejs.org/) v18+
+- [pnpm](https://pnpm.io/) v9+
+- Chrome or Chromium (required for WhatsApp integration)
 
 ### Installation
-1.  **Clone the repository**:
-    ```bash
-    git clone https://github.com/mohamedgb00714/aether-hub.git
-    cd aether-hub
-    ```
 
-2.  **Install dependencies**:
-    ```bash
-    pnpm install
-    ```
+```bash
+# Clone the repository
+git clone https://github.com/mohamedgb00714/aether-hub.git
+cd aether-hub
 
-3.  **Configure environment**:
-    Copy the example environment file and add your API keys (optional, you can also add them via the app UI).
-    ```bash
-    cp .env.example .env
-    ```
+# Install dependencies
+pnpm install
 
-4.  **Start for development**:
-    ```bash
-    pnpm run dev:electron
-    ```
+# Configure environment (optional — keys can be added via the app UI)
+cp .env.example .env
+
+# Start development
+pnpm run dev:electron
+```
 
 ### Building for Production
+
 ```bash
+# Full build (Vite + TypeScript + esbuild preload)
 pnpm run build:electron
-pnpm run package
+
+# Package for your platform
+pnpm run package:linux   # AppImage + .deb
+pnpm run package:mac     # .dmg (Intel + Apple Silicon)
+pnpm run package:win     # .exe installer
 ```
+
+## 🏗️ Architecture
+
+```
+aether-hub/
+├── electron/              # Main process (Node.js)
+│   ├── main.ts            # Window management, IPC handlers, native features
+│   ├── preload.ts         # Context-isolated IPC bridge (window.electronAPI)
+│   ├── database.ts        # SQLite database (16 tables)
+│   ├── ai-service.ts      # Centralized multi-provider AI service
+│   ├── security.ts        # Encryption key management via safeStorage
+│   ├── addon-server.ts    # WebSocket server for browser extensions
+│   ├── whatsapp.ts        # WhatsApp Web automation
+│   ├── telegram.ts        # Telegram client integration
+│   ├── discord-selfbot.ts # Discord self-bot (experimental)
+│   └── youtube.ts         # YouTube channel analysis
+├── src/                   # Renderer process (React)
+│   ├── pages/             # Route pages (Dashboard, Chat, Emails, etc.)
+│   ├── components/        # Reusable UI components
+│   ├── services/          # AI, database, sync, and connector services
+│   └── types.ts           # Shared TypeScript interfaces
+├── browser-addon/         # Browser extensions
+│   ├── chrome/            # Chrome extension (Manifest V3)
+│   └── firefox/           # Firefox extension (Manifest V2)
+└── .github/workflows/     # CI/CD (build + release on tag push)
+```
+
+### Key Design Principles
+
+- **Context Isolation** — Renderer never imports Node.js modules; all native ops go through IPC
+- **No Hardcoded Secrets** — All keys stored encrypted via `safeStorage` + electron-store
+- **Centralized AI** — Single service handles all 6 providers (no duplicated logic)
+- **Preload via esbuild** — Separate CommonJS build for sandbox compatibility
 
 ## 🌐 Browser Extension
-... (keep existing content or similar)
 
-aethermsaid hub includes browser extensions for Chrome and Firefox that connect to the desktop app via WebSocket, enabling:
-- **Quick access** to emails, calendar events, and notifications from your browser
-- **AI Chat** with full markdown rendering (headers, lists, code blocks, bold/italic)
-- **Actions tab** to view and manage AI-generated action items
+The included browser extensions connect to the desktop app via WebSocket (port 8765):
+
+- **AI Chat** with full markdown rendering
+- **Quick access** to emails, calendar, notifications
+- **Actions tab** for AI-generated action items
 - **Page saving** to Knowledge Base with one click
-- **Seamless sync** with the desktop app
 
-### Installing the Browser Extension
+### Chrome
+1. Go to `chrome://extensions/` → Enable Developer mode
+2. Click **Load unpacked** → Select `browser-addon/chrome/`
 
-#### From Packaged App (Recommended)
-After installing aethermsaid hub, the browser extension files are located at:
-- **Linux**: `/opt/aethermsaid-hub/resources/app.asar.unpacked/browser-addon/`
-- **macOS**: `/Applications/aethermsaid-hub.app/Contents/Resources/app.asar.unpacked/browser-addon/`
-- **Windows**: `C:\Program Files\aethermsaid-hub\resources\app.asar.unpacked\browser-addon\`
+### Firefox
+1. Go to `about:debugging#/runtime/this-firefox`
+2. Click **Load Temporary Add-on** → Select `browser-addon/firefox/manifest.json`
 
-#### Chrome Installation
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable **Developer mode** (toggle in top-right)
-3. Click **Load unpacked**
-4. Select the `chrome` folder from the addon location above
+> The desktop app must be running for the extension to connect.
 
-#### Firefox Installation
-1. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
-2. Click **Load Temporary Add-on...**
-3. Select the `manifest.json` file from the `firefox` folder
-
-### Requirements
-- aethermsaid hub desktop app must be running (provides WebSocket server on port 8765)
-- Extensions auto-connect when the app is running
-
-### Version Information
-- Extension Version: **1.0.0**
-- Manifest: Chrome (v3), Firefox (v2)
-- Features: Chat with AI, Emails, Calendar, Notifications, Actions, Knowledge Base
-
-## 📦 Building & Distribution
-
-### Quick Release (Automated)
-
-Create a new release for all platforms with one command:
-
-```bash
-npm version patch  # or minor, major
-git push origin --tags
-```
-
-This triggers GitHub Actions to automatically:
-- Build installers for Windows, macOS (Intel + Apple Silicon), and Linux
-- Create a GitHub Release with all installers
-- Takes ~10-20 minutes
-
-### Download Installers
+## 📦 Download
 
 Download the latest release from the [Releases page](https://github.com/mohamedgb00714/aether-hub/releases):
 
-- **Windows**: `aether-hub-{version}-x64-setup.exe`
-- **macOS**: `aether-hub-{version}-x64.dmg` (Intel) or `aether-hub-{version}-arm64.dmg` (Apple Silicon)
-- **Linux**: `aether-hub-{version}-x64.AppImage` or `aether-hub-{version}-amd64.deb`
+| Platform | File |
+|----------|------|
+| **Windows** | `aethermsaid-hub-{version}-x64-setup.exe` |
+| **macOS (Intel)** | `aethermsaid-hub-{version}-x64.dmg` |
+| **macOS (Apple Silicon)** | `aethermsaid-hub-{version}-arm64.dmg` |
+| **Linux (AppImage)** | `aethermsaid-hub-{version}-x64.AppImage` |
+| **Linux (Debian)** | `aethermsaid-hub-{version}-amd64.deb` |
 
-### Manual Local Build
+### Automated Releases
+
+Pushing a version tag triggers GitHub Actions to build for all platforms:
 
 ```bash
-# Install dependencies
-npm install
-
-# Build for all platforms
-npm run build:electron
-npm run package
-
-# Or build for specific platforms
-npm run package:win     # Windows
-npm run package:mac     # macOS
-npm run package:linux   # Linux
+git tag -a v1.0.0 -m "v1.0.0"
+git push origin v1.0.0
 ```
 
-For detailed instructions, see [RELEASE_GUIDE.md](./RELEASE_GUIDE.md).
+## 🤝 Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+1. Fork the repo
+2. Create your branch: `git checkout -b feature/amazing-feature`
+3. Commit: `git commit -m "Add amazing feature"`
+4. Push: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+## 🔒 Security
+
+Found a vulnerability? Please report it privately — see [SECURITY.md](SECURITY.md).
+
+## 📄 License
+
+[MIT](LICENSE) © msaid mohamed el hadi
