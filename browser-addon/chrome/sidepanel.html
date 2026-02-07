@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>aethermsaid hub</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <img src="icons/icon32.png" alt="aethermsaid hub">
+        <span>Nexus<span class="accent">AI</span></span>
+      </div>
+      <div id="status-indicator" class="status disconnected" title="Disconnected"></div>
+    </header>
+
+    <!-- Connection Section -->
+    <section id="connection-section" class="section">
+      <div class="connection-card">
+        <div class="connection-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+          </svg>
+        </div>
+        <h2>Connect to aethermsaid hub</h2>
+        <p>Paste the connection secret from aethermsaid hub Desktop app to link your browser.</p>
+        <input 
+          type="text" 
+          id="secret-input" 
+          placeholder="Paste connection secret here..."
+          class="input"
+        >
+        <button id="connect-btn" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"/>
+            <path d="M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+          </svg>
+          Connect
+        </button>
+        <p class="help-text">
+          Find the secret in aethermsaid hub → Connections → Browser Addon
+        </p>
+      </div>
+    </section>
+
+    <!-- Connected Section -->
+    <section id="connected-section" class="section hidden">
+      <!-- Tab Navigation -->
+      <nav class="tabs">
+        <button class="tab active" data-tab="dashboard">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+          </svg>
+        </button>
+        <button class="tab" data-tab="actions">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 11l3 3L22 4"/>
+            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+          </svg>
+        </button>
+        <button class="tab" data-tab="chat">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+          </svg>
+        </button>
+        <button class="tab" data-tab="save">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+          </svg>
+        </button>
+        <button class="tab" data-tab="settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+          </svg>
+        </button>
+      </nav>
+
+      <!-- Dashboard Tab -->
+      <div id="tab-dashboard" class="tab-content active">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon email">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="unread-count">-</span>
+              <span class="stat-label">Unread Emails</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon calendar">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="events-count">-</span>
+              <span class="stat-label">Today's Events</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+          <h3>Quick Actions</h3>
+          <div class="actions-grid">
+            <button id="save-page-btn" class="action-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/>
+                <polyline points="7 3 7 8 15 8"/>
+              </svg>
+              <span>Save Page</span>
+            </button>
+            <button id="quick-note-btn" class="action-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              <span>Quick Note</span>
+            </button>
+            <button id="refresh-btn" class="action-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 4 23 10 17 10"/>
+                <polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+              </svg>
+              <span>Refresh</span>
+            </button>
+            <button id="open-app-btn" class="action-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                <polyline points="15 3 21 3 21 9"/>
+                <line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+              <span>Open App</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- AI Notifications -->
+        <div class="recent-section">
+          <h3>AI Insights</h3>
+          <div id="ai-notifications" class="recent-list">
+            <div class="loading">Generating insights...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions Tab -->
+      <div id="tab-actions" class="tab-content">
+        <div class="actions-container">
+          <div class="actions-header">
+            <h3>AI Actions</h3>
+            <button id="refresh-actions-btn" class="btn-icon" title="Refresh">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 4 23 10 17 10"/>
+                <polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+              </svg>
+            </button>
+          </div>
+          <div class="actions-stats" id="actions-stats">
+            <div class="stat-mini pending">
+              <span class="stat-count" id="pending-actions-count">0</span>
+              <span class="stat-text">Pending</span>
+            </div>
+            <div class="stat-mini in-progress">
+              <span class="stat-count" id="in-progress-actions-count">0</span>
+              <span class="stat-text">In Progress</span>
+            </div>
+            <div class="stat-mini completed">
+              <span class="stat-count" id="completed-actions-count">0</span>
+              <span class="stat-text">Done</span>
+            </div>
+          </div>
+          <div class="actions-filter">
+            <select id="actions-filter" class="select-mini">
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="all">All Actions</option>
+            </select>
+          </div>
+          <div id="actions-list" class="actions-list">
+            <div class="loading">Loading actions...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Tab -->
+      <div id="tab-chat" class="tab-content">
+        <div class="chat-container">
+          <div id="chat-messages" class="chat-messages">
+            <div class="chat-welcome">
+              <div class="welcome-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+              </div>
+              <h3>Ask AI Anything</h3>
+              <p>Get insights from your emails, calendar, and saved content</p>
+            </div>
+          </div>
+          <div class="chat-input-container">
+            <input 
+              type="text" 
+              id="chat-input" 
+              placeholder="Ask AI anything..."
+              class="input"
+            >
+            <button id="send-btn" class="btn btn-send">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Save Tab -->
+      <div id="tab-save" class="tab-content">
+        <div class="save-container">
+          <div class="current-page">
+            <h3>Current Page</h3>
+            <div id="current-page-info" class="page-info">
+              <div class="page-title">Loading...</div>
+              <div class="page-url">-</div>
+            </div>
+            <button id="save-current-page-btn" class="btn btn-primary btn-full">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+              </svg>
+              Save to Knowledge Base
+            </button>
+          </div>
+
+          <div class="note-section">
+            <h3>Quick Note</h3>
+            <textarea id="note-textarea" placeholder="Type your note here..." class="textarea"></textarea>
+            <button id="save-note-btn" class="btn btn-secondary btn-full">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Save Note
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Tab -->
+      <div id="tab-settings" class="tab-content">
+        <div class="settings-container">
+          <div class="settings-section">
+            <h3>Connection</h3>
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">Status</span>
+                <span id="settings-status" class="setting-value connected">Connected</span>
+              </div>
+            </div>
+            <button id="disconnect-btn" class="btn btn-danger btn-full">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18.36 6.64a9 9 0 11-12.73 0"/>
+                <line x1="12" y1="2" x2="12" y2="12"/>
+              </svg>
+              Disconnect
+            </button>
+          </div>
+
+          <div class="settings-section">
+            <h3>Keyboard Shortcuts</h3>
+            <div class="shortcut-list">
+              <div class="shortcut-item">
+                <span>Open Panel</span>
+                <kbd>Ctrl+Shift+N</kbd>
+              </div>
+              <div class="shortcut-item">
+                <span>Save Page</span>
+                <kbd>Ctrl+Shift+S</kbd>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>About</h3>
+            <div class="about-info">
+              <p>aethermsaid hub Connector v1.0.0</p>
+              <p class="text-muted">Connect your browser to aethermsaid hub for AI-powered productivity</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Marked.js for Markdown rendering -->
+  <script src="lib/marked.min.js"></script>
+  <!-- DOMPurify for sanitization -->
+  <script src="lib/purify.min.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

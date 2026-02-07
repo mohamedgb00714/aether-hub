@@ -1,0 +1,391 @@
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { summarizeNotifications, summarizeCalendar } from '../services/geminiService';
+import { Notification, CalendarEvent, Account } from '../types';
+import { db } from '../services/database';
+import storage from '../services/electronStore';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
+import AccountFilter, { BrandIcon } from '../components/AccountFilter';
+import { 
+  SparklesIcon, 
+  ArrowPathIcon, 
+  ShieldCheckIcon, 
+  CalendarDaysIcon,
+  QueueListIcon,
+  BoltIcon,
+  DocumentArrowDownIcon,
+  EnvelopeIcon,
+  CheckCircleIcon
+} from '@heroicons/react/24/outline';
+
+const DigestPage: React.FC = () => {
+  const [summary, setSummary] = useState<string>('');
+  const [calSummary, setCalSummary] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Auto-generate digest when data is loaded
+  useEffect(() => {
+    if (dataLoaded && (notifications.length > 0 || events.length > 0)) {
+      generateDigest();
+    }
+  }, [dataLoaded]);
+
+  const loadData = async () => {
+    // Load connected accounts from database
+    const connectedAccounts = await db.accounts.getAll();
+    if (connectedAccounts && connectedAccounts.length > 0) {
+      setAccounts(connectedAccounts);
+      setSelectedAccountIds(connectedAccounts.map(a => a.id));
+    }
+    
+    // Load emails from database
+    const allEmails = await db.emails.getAll();
+    const loadedNotifications: Notification[] = allEmails.slice(0, 20).map((email) => {
+      const account = connectedAccounts.find(a => a.id === email.accountId);
+      return {
+        id: email.id,
+        accountId: email.accountId,
+        platform: (account?.platform || 'google') as any,
+        sender: email.sender,
+        subject: email.subject,
+        excerpt: email.preview,
+        timestamp: new Date(email.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        priority: (email.aiPriority === 3 ? 'high' : email.aiPriority === 2 ? 'medium' : 'low') as 'high' | 'medium' | 'low',
+        read: email.isRead,
+        category: (email.aiCategory || 'Work') as any,
+        type: 'email' as const
+      };
+    });
+    setNotifications(loadedNotifications);
+    
+    // Load events from database
+    const allEvents = await db.events.getAll();
+    const loadedEvents: CalendarEvent[] = allEvents.slice(0, 10).map((evt) => {
+      const account = connectedAccounts.find(a => a.id === evt.accountId);
+      const startDate = new Date(evt.startTime);
+      const endDate = new Date(evt.endTime);
+      
+      return {
+        id: evt.id,
+        accountId: evt.accountId,
+        platform: (account?.platform || 'google') as any,
+        title: evt.title,
+        startTime: startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        endTime: endDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        attendees: evt.attendees || []
+      };
+    });
+    setEvents(loadedEvents);
+    
+    console.log('📛 Loaded', loadedNotifications.length, 'emails and', loadedEvents.length, 'events from database');
+    setDataLoaded(true);
+  };
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const generateDigest = async () => {
+    setLoading(true);
+    
+    // Filter by selected accounts
+    const filteredNotifications = selectedAccountIds.length > 0 && selectedAccountIds.length < accounts.length
+      ? notifications.filter(n => selectedAccountIds.includes(n.accountId))
+      : notifications;
+    
+    const filteredEvents = selectedAccountIds.length > 0 && selectedAccountIds.length < accounts.length
+      ? events.filter(e => selectedAccountIds.includes(e.accountId))
+      : events;
+    
+    const [emailResult, calendarResult] = await Promise.all([
+      summarizeNotifications(filteredNotifications.length > 0 ? filteredNotifications : []),
+      summarizeCalendar(filteredEvents.length > 0 ? filteredEvents : [])
+    ]);
+    setSummary(emailResult);
+    setCalSummary(calendarResult);
+    
+    // Save last digest
+    await storage.set('last_digest', {
+      email: emailResult,
+      calendar: calendarResult,
+      timestamp: new Date().toISOString()
+    });
+    
+    setLoading(false);
+  };
+
+  const exportDigest = async () => {
+    const fullText = `# aethermsaid hub Intelligence Briefing
+Generated: ${new Date().toLocaleString()}
+
+## Communications Summary
+${summary}
+
+## Schedule Summary
+${calSummary}
+
+---
+Generated by aethermsaid hub - Privacy-First Intelligence Hub
+`;
+
+    // Try Electron file save, fallback to clipboard
+    try {
+      if (window.electronAPI?.clipboard) {
+        await window.electronAPI.clipboard.writeText(fullText);
+        showToast('Digest copied to clipboard!');
+      } else {
+        await navigator.clipboard.writeText(fullText);
+        showToast('Digest copied to clipboard!');
+      }
+    } catch (error) {
+      // Fallback: create downloadable file
+      const blob = new Blob([fullText], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `nexus-digest-${new Date().toISOString().split('T')[0]}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Digest downloaded as file!');
+    }
+  };
+
+  const emailDigest = () => {
+    const subject = `aethermsaid hub Daily Briefing - ${new Date().toLocaleDateString()}`;
+    const body = `Here's your intelligent briefing:\n\n${summary}\n\n${calSummary}`;
+    window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+  };
+
+  const renderedMarkdown = useMemo(() => {
+    if (!summary) return '';
+    const rawHtml = marked.parse(summary) as string;
+    return DOMPurify.sanitize(rawHtml);
+  }, [summary]);
+
+  const renderedCalMarkdown = useMemo(() => {
+    if (!calSummary) return '';
+    // Fixed: Ensure the sidebar schedule summary also renders as markdown
+    const rawHtml = marked.parse(calSummary) as string;
+    return DOMPurify.sanitize(rawHtml);
+  }, [calSummary]);
+
+  return (
+    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-700 pb-20 relative px-10 pt-6">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] bg-slate-900 text-white px-8 py-4 rounded-[1.5rem] shadow-2xl flex items-center gap-4 animate-in slide-in-from-bottom-5 duration-300">
+          <CheckCircleIcon className="w-5 h-5 text-emerald-400" />
+          <span className="text-sm font-black uppercase tracking-widest">{toast}</span>
+        </div>
+      )}
+      
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-center gap-6">
+          <div 
+            className="p-5 bg-indigo-600 rounded-[2rem] shadow-2xl shadow-indigo-200 animate-pulse hover:animate-none hover:scale-105 transition-transform cursor-help"
+            title="Intelligent Briefing: A unified view created by cross-referencing your connected accounts using AI."
+          >
+             <SparklesIcon className="w-10 h-10 text-white" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+               <h1 className="text-4xl font-black text-slate-900 tracking-tight">Intelligent Briefing</h1>
+               <span className="bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase px-3 py-1 rounded-full tracking-widest">v2.0 Beta</span>
+            </div>
+            <p className="text-slate-500 font-medium">Holistic synthesis from your connected identities.</p>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button 
+            onClick={generateDigest}
+            disabled={loading}
+            className="flex items-center space-x-3 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-indigo-600 shadow-xl shadow-slate-100 disabled:opacity-50 transition-all active:scale-95 group"
+          >
+            <ArrowPathIcon className={`w-5 h-5 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+            <span>Regenerate</span>
+          </button>
+          <button 
+            onClick={exportDigest}
+            disabled={loading || !summary}
+            className="flex items-center space-x-3 px-8 py-4 bg-white border-2 border-slate-200 text-slate-700 rounded-2xl font-black hover:border-indigo-400 shadow-sm disabled:opacity-50 transition-all active:scale-95"
+          >
+            <DocumentArrowDownIcon className="w-5 h-5" />
+            <span>Export</span>
+          </button>
+          <button 
+            onClick={emailDigest}
+            disabled={loading || !summary}
+            className="flex items-center space-x-3 px-8 py-4 bg-white border-2 border-slate-200 text-slate-700 rounded-2xl font-black hover:border-indigo-400 shadow-sm disabled:opacity-50 transition-all active:scale-95"
+          >
+            <EnvelopeIcon className="w-5 h-5" />
+            <span>Email</span>
+          </button>
+        </div>
+      </div>
+      
+      {/* Account Filter */}
+      {accounts.length > 1 && (
+        <div className="flex items-center gap-4">
+          <AccountFilter
+            accounts={accounts}
+            selectedAccountIds={selectedAccountIds}
+            onFilterChange={(ids) => {
+              setSelectedAccountIds(ids);
+              // Regenerate digest with new filter
+              setTimeout(generateDigest, 100);
+            }}
+            compact
+          />
+        </div>
+      )}
+
+      {loading ? (
+        <div className="bg-white border border-slate-200 rounded-[3.5rem] p-40 flex flex-col items-center justify-center space-y-8 shadow-sm">
+          <div className="relative">
+             <div className="w-24 h-24 border-8 border-slate-50 border-t-indigo-600 rounded-full animate-spin"></div>
+             <SparklesIcon className="w-10 h-10 text-indigo-200 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+          </div>
+          <div className="text-center space-y-2">
+             <p className="text-slate-900 font-black text-2xl tracking-tight">Cross-Reference Active</p>
+             <p className="text-slate-400 font-medium max-w-xs mx-auto">Gemini is looking for patterns across your Work and Personal accounts...</p>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+          <div className="lg:col-span-8 space-y-8">
+            <div className="bg-white border border-slate-200 rounded-[3rem] shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+              <div className="p-12">
+                 <div className="flex items-center justify-between mb-12">
+                   <div 
+                    className="flex items-center space-x-3 text-indigo-600 font-black tracking-widest text-xs uppercase bg-indigo-50 w-fit px-5 py-2 rounded-full cursor-help hover:bg-indigo-100 transition-colors"
+                    title="AI Feed: This summary is generated in real-time based on your current account activity."
+                  >
+                    <BoltIcon className="w-4 h-4" />
+                    <span>AI Synthesis Feed</span>
+                  </div>
+                  <div className="flex -space-x-2">
+                     <div className="w-10 h-10 rounded-full border-4 border-white bg-white shadow-sm flex items-center justify-center hover:scale-110 transition-transform cursor-help" title="Data Source: Google Workspace">
+                        <BrandIcon platform="google" className="w-5 h-5" />
+                     </div>
+                     <div className="w-10 h-10 rounded-full border-4 border-white bg-white shadow-sm flex items-center justify-center hover:scale-110 transition-transform cursor-help" title="Data Source: Microsoft Outlook">
+                        <BrandIcon platform="outlook" className="w-5 h-5" />
+                     </div>
+                  </div>
+                 </div>
+                
+                <div 
+                  className="digest-prose prose-slate max-w-none"
+                  dangerouslySetInnerHTML={{ __html: renderedMarkdown }}
+                />
+              </div>
+
+              <div className="bg-slate-50 p-8 border-t border-slate-100 flex items-center justify-between text-slate-400 mt-auto">
+                <div 
+                  className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest cursor-help hover:text-indigo-600 transition-colors group/privacy"
+                  title="Privacy Protection: aethermsaid hub processes your data using a stateless model. Your history is used for current insights only and is never stored on servers or used for model training."
+                >
+                  <ShieldCheckIcon className="w-5 h-5 text-indigo-400 group-hover/privacy:scale-110 transition-transform" />
+                  Privacy-First Summarization
+                </div>
+                <div className="flex items-center gap-6 text-[11px] font-bold">
+                   <div className="flex items-center gap-1.5 cursor-help" title="Nexus is currently pulling intelligence from 2 of your connected platforms.">
+                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      2 Sources Synced
+                   </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <div className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <BrandIcon platform="google" />
+                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Source Insight: Work Gmail</h4>
+                  </div>
+                  <p className="text-sm font-bold text-slate-800 leading-relaxed italic">"Heavy emphasis on Project Alpha today. 4 unread messages regarding architectural changes."</p>
+               </div>
+               <div className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <BrandIcon platform="outlook" />
+                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Source Insight: Personal Outlook</h4>
+                  </div>
+                  <p className="text-sm font-bold text-slate-800 leading-relaxed italic">"Standard administrative traffic. Your bank statement is the only notable update."</p>
+               </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-4 space-y-8">
+            <div className="bg-slate-900 rounded-[3rem] p-10 text-white shadow-2xl shadow-indigo-100 relative overflow-hidden group">
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-10">
+                   <h3 className="text-slate-400 font-black text-xs uppercase tracking-[0.2em] flex items-center gap-2">
+                    <CalendarDaysIcon className="w-5 h-5 text-indigo-400" />
+                    Focus Report
+                  </h3>
+                </div>
+                
+                {/* Fixed: Schedule summary now renders markdown correctly as HTML */}
+                <div className="mb-10 p-5 bg-white/5 rounded-2xl border border-white/10 text-sm text-slate-200 leading-relaxed shadow-inner sidebar-prose">
+                   {renderedCalMarkdown ? (
+                     <div dangerouslySetInnerHTML={{ __html: renderedCalMarkdown }} />
+                   ) : (
+                     <p className="italic opacity-50">Syncing schedule insights...</p>
+                   )}
+                </div>
+
+                <div className="space-y-8">
+                  {events.length > 0 ? events.map(ev => (
+                    <div key={ev.id} className="relative pl-8 border-l-2 border-indigo-500/30 hover:border-indigo-400 transition-all py-1 group/item cursor-default">
+                       <div className="flex items-center gap-2 mb-1.5">
+                          <BrandIcon platform={ev.platform} className="w-3 h-3" />
+                          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{ev.startTime}</p>
+                       </div>
+                       <p className="text-base font-black text-slate-100 group-hover/item:text-indigo-200 transition-colors">{ev.title}</p>
+                       <div className="mt-2 flex gap-1 opacity-40 group-hover/item:opacity-100 transition-opacity">
+                          <span className="text-[9px] font-black bg-white/10 text-white px-3 py-1 rounded-full uppercase">Verified</span>
+                       </div>
+                    </div>
+                  )) : (
+                    <p className="text-sm text-slate-400 italic">No upcoming events. Connect a calendar to see your schedule.</p>
+                  )}
+                </div>
+              </div>
+              <div className="absolute -top-20 -left-20 w-64 h-64 bg-indigo-500/10 blur-[100px] rounded-full"></div>
+            </div>
+
+            <div className="bg-amber-50 border-2 border-amber-100 rounded-[3rem] p-10">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-amber-900 font-black text-xs uppercase tracking-widest flex items-center gap-2">
+                  <QueueListIcon className="w-5 h-5" />
+                  Nexus Actionables
+                </h3>
+              </div>
+              <div className="space-y-4">
+                <div className="p-6 bg-white/60 backdrop-blur-sm rounded-[1.5rem] border border-amber-200 text-sm font-bold text-amber-950 leading-relaxed shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                   Review Sarah's Alpha updates before the 2 PM Sync.
+                </div>
+                <div className="p-6 bg-white/60 backdrop-blur-sm rounded-[1.5rem] border border-amber-200 text-sm font-bold text-amber-950 leading-relaxed shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                  Acknowledge HR Policy change (requires 2m).
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DigestPage;

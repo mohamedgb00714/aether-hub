@@ -1,0 +1,8 @@
+{
+  "name": "aethermsaid hub Personal Hub",
+  "description": "A unified AI-powered dashboard for managing and summarizing your personal accounts like Google, Outlook, and Facebook.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}

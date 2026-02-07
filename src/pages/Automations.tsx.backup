@@ -1,0 +1,938 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  ComputerDesktopIcon, 
+  PlayIcon, 
+  StopIcon,
+  PlusIcon,
+  TrashIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  ExclamationCircleIcon,
+  ArrowPathIcon,
+  Cog6ToothIcon,
+  SparklesIcon,
+  EyeSlashIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+} from '@heroicons/react/24/outline';
+import { browserAutomationService } from '../services/browserUseService';
+import storage, { STORAGE_KEYS } from '../services/electronStore';
+
+interface ChromeProfile {
+  id: string;
+  name: string;
+  path: string;
+  email?: string;
+  avatar?: string;
+}
+
+interface Automation {
+  id: string;
+  name: string;
+  description: string | null;
+  task: string;
+  profile_id: string;
+  headless: number;
+  run_on_startup: number;
+  cron_schedule: string | null;
+  status: string;
+  last_run: string | null;
+  created_at: string;
+}
+
+interface AutomationHistory {
+  id: string;
+  automation_id: string;
+  status: string;
+  started_at: string;
+  completed_at: string | null;
+  result: string | null;
+  error_message: string | null;
+}
+
+export default function AutomationsPage() {
+  const [profiles, setProfiles] = useState<ChromeProfile[]>([]);
+  const [automations, setAutomations] = useState<Automation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [chromeInstalled, setChromeInstalled] = useState(false);
+  const [hasLLM, setHasLLM] = useState(false);
+  const [llmProvider, setLlmProvider] = useState<string>('');
+  
+  // Installation state
+  const [pythonInstalled, setPythonInstalled] = useState(false);
+  const [pythonVersion, setPythonVersion] = useState<string | null>(null);
+  const [uvInstalled, setUvInstalled] = useState(false);
+  const [uvVersion, setUvVersion] = useState<string | null>(null);
+  const [browserUseInstalled, setBrowserUseInstalled] = useState(false);
+  const [browserUseVersion, setBrowserUseVersion] = useState<string | null>(null);
+  const [isInstalling, setIsInstalling] = useState(false);
+  const [installProgress, setInstallProgress] = useState<string>('');
+  
+  // Settings
+  const [maxConcurrent, setMaxConcurrent] = useState(3);
+  const [runningCount, setRunningCount] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
+  
+  // New automation form
+  const [showNewForm, setShowNewForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    task: '',
+    profile_id: '',
+    headless: false,
+    run_on_startup: false,
+    cron_schedule: '',
+  });
+
+  // History and analysis
+  const [selectedHistory, setSelectedHistory] = useState<{[key: string]: AutomationHistory[]}>({});
+  const [expandedAutomation, setExpandedAutomation] = useState<string | null>(null);
+  const [analyzingResult, setAnalyzingResult] = useState<string | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<{[key: string]: string}>({});
+
+  useEffect(() => {
+    loadData();
+    loadSchedulerStatus();
+    
+    // Poll for running status every 2 seconds
+    const interval = setInterval(() => {
+      loadSchedulerStatus();
+      loadAutomations();
+    }, 2000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const installed = await window.electronAPI.chrome.isInstalled();
+      setChromeInstalled(installed);
+
+      if (installed) {
+        const chromeProfiles = await window.electronAPI.chrome.getProfiles();
+        setProfiles(chromeProfiles);
+        
+        if (chromeProfiles.length > 0 && !formData.profile_id) {
+          setFormData(prev => ({ ...prev, profile_id: chromeProfiles[0].path }));
+        }
+      }
+
+      const configured = await browserAutomationService.hasLLMConfigured();
+      setHasLLM(configured);
+      if (configured) {
+        const provider = await browserAutomationService.getProviderName();
+        setLlmProvider(provider);
+      }
+
+      const pythonCheck = await window.electronAPI.python.checkInstalled();
+      setPythonInstalled(pythonCheck.installed);
+      setPythonVersion(pythonCheck.version);
+
+      if (pythonCheck.installed) {
+        const uvCheck = await window.electronAPI.uv.checkInstalled();
+        setUvInstalled(uvCheck.installed);
+        setUvVersion(uvCheck.version);
+
+        try {
+          const browserUseCheck = await window.electronAPI.browseruse.checkInstalled();
+          setBrowserUseInstalled(browserUseCheck.installed);
+          setBrowserUseVersion(browserUseCheck.version);
+        } catch (e) {
+          setBrowserUseInstalled(false);
+        }
+      }
+
+      await loadAutomations();
+      
+      const stored = await storage.get(STORAGE_KEYS.MAX_CONCURRENT_AUTOMATIONS);
+      if (stored) setMaxConcurrent(stored);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+    }
+    setLoading(false);
+  };
+
+  const loadAutomations = async () => {
+    try {
+      const result = await window.electronAPI.automation.getAll();
+      if (result.success && result.automations) {
+        setAutomations(result.automations);
+      }
+    } catch (error) {
+      console.error('Failed to load automations:', error);
+    }
+  };
+
+  const loadSchedulerStatus = async () => {
+    try {
+      const result = await window.electronAPI.automation.getSchedulerStatus();
+      if (result.success) {
+        setRunningCount(result.runningCount || 0);
+        if (result.maxConcurrent) setMaxConcurrent(result.maxConcurrent);
+      }
+    } catch (error) {
+      console.error('Failed to load scheduler status:', error);
+    }
+  };
+
+  const handleSaveMaxConcurrent = async () => {
+    try {
+      await window.electronAPI.automation.setMaxConcurrent(maxConcurrent);
+      await storage.set(STORAGE_KEYS.MAX_CONCURRENT_AUTOMATIONS, maxConcurrent);
+      setShowSettings(false);
+    } catch (error) {
+      console.error('Failed to save max concurrent:', error);
+    }
+  };
+
+  const saveAutomations = async (newAutomations: Automation[]) => {
+    await storage.set(AUTOMATIONS_STORAGE_KEY, newAutomations);
+    setAutomations(newAutomations);
+  };
+
+  const handleRefreshLLMStatus = async () => {
+    setIsChecking(true);
+    try {
+      const configured = await browserAutomationService.hasLLMConfigured();
+      setHasLLM(configured);
+      if (configured) {
+        const provider = await browserAutomationService.getProviderName();
+        setLlmProvider(provider);
+      }
+
+      // Re-check Python and browser-use
+      const pythonCheck = await window.electronAPI.python.checkInstalled();
+      setPythonInstalled(pythonCheck.installed);
+      setPythonVersion(pythonCheck.version);
+
+      if (pythonCheck.installed) {
+        const uvCheck = await window.electronAPI.uv.checkInstalled();
+        setUvInstalled(uvCheck.installed);
+        setUvVersion(uvCheck.version);
+
+        try {
+          const browserUseCheck = await window.electronAPI.browseruse.checkInstalled();
+          setBrowserUseInstalled(browserUseCheck.installed);
+          setBrowserUseVersion(browserUseCheck.version);
+        } catch (e) {
+          setBrowserUseInstalled(false);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check LLM status:', error);
+    }
+    setIsChecking(false);
+  };
+
+  const handleInstallUv = async () => {
+    setIsInstalling(true);
+    setInstallProgress('Installing uv package manager...');
+
+    try {
+      const result = await window.electronAPI.uv.install();
+      
+      if (result.success) {
+        setInstallProgress('uv installed successfully!');
+        setUvInstalled(true);
+        
+        // Re-check version
+        const uvCheck = await window.electronAPI.uv.checkInstalled();
+        setUvVersion(uvCheck.version);
+        
+        setTimeout(() => {
+          setInstallProgress('');
+          setIsInstalling(false);
+        }, 3000);
+      } else {
+        setInstallProgress(`Failed: ${result.error}`);
+        setTimeout(() => {
+          setInstallProgress('');
+          setIsInstalling(false);
+        }, 5000);
+      }
+    } catch (error: any) {
+      console.error('Failed to install uv:', error);
+      setInstallProgress(`Error: ${error.message}`);
+      setTimeout(() => {
+        setInstallProgress('');
+        setIsInstalling(false);
+      }, 5000);
+    }
+  };
+
+  const handleInstallBrowserUse = async () => {
+    setIsInstalling(true);
+    setInstallProgress('Starting installation...');
+
+    // Listen for progress updates
+    const removeListener = window.electronAPI.browseruse.onInstallProgress((message) => {
+      setInstallProgress(message);
+    });
+
+    try {
+      const result = await window.electronAPI.browseruse.install();
+      
+      if (result.success) {
+        setInstallProgress('Installation successful!');
+        setBrowserUseInstalled(true);
+        
+        // Re-check version
+        const browserUseCheck = await window.electronAPI.browseruse.checkInstalled();
+        setBrowserUseVersion(browserUseCheck.version);
+
+        setTimeout(() => {
+          setInstallProgress('');
+        }, 3000);
+      } else {
+        setInstallProgress(`Installation failed: ${result.error}`);
+      }
+    } catch (error: any) {
+      setInstallProgress(`Installation error: ${error.message}`);
+    }
+
+    removeListener();
+    setIsInstalling(false);
+  };
+
+  const handleCreateAutomation = async () => {
+    if (!newAutomation.name.trim() || !newAutomation.task.trim() || !selectedProfile) {
+      return;
+    }
+
+    const automation: Automation = {
+      id: `auto_${Date.now()}`,
+      name: newAutomation.name.trim(),
+      description: newAutomation.description.trim(),
+      task: newAutomation.task.trim(),
+      profileId: selectedProfile,
+      status: 'idle',
+      createdAt: new Date().toISOString(),
+    };
+
+    await saveAutomations([...automations, automation]);
+    setNewAutomation({ name: '', description: '', task: '' });
+    setShowNewForm(false);
+  };
+
+  const handleDeleteAutomation = async (id: string) => {
+    await saveAutomations(automations.filter(a => a.id !== id));
+  };
+
+  const handleRunAutomation = async (automation: Automation) => {
+    if (!hasLLM) {
+      alert('Please configure your AI provider (Gemini or OpenRouter) in Settings first.');
+      return;
+    }
+
+    if (!pythonInstalled || !browserUseInstalled) {
+      alert('Please install Python and browser-use package first.');
+      return;
+    }
+
+    setRunningId(automation.id);
+    setRunningSteps([]);
+    setExpandedAutomation(automation.id);
+
+    // Update status to running
+    const updatedAutomations = automations.map(a => 
+      a.id === automation.id ? { ...a, status: 'running' as const } : a
+    );
+    await saveAutomations(updatedAutomations);
+
+    try {
+      const result = await browserAutomationService.runTask(automation.task, automation.profileId, {
+        onStep: (step) => {
+          setRunningSteps(prev => [...prev, step]);
+        },
+      });
+
+      // Update with result
+      const finalAutomations = automations.map(a => 
+        a.id === automation.id 
+          ? { 
+              ...a, 
+              status: result.status === 'finished' ? 'completed' as const : 'failed' as const,
+              lastRun: new Date().toISOString(),
+              result: result.output,
+            } 
+          : a
+      );
+      await saveAutomations(finalAutomations);
+    } catch (error: any) {
+      const errorAutomations = automations.map(a => 
+        a.id === automation.id 
+          ? { 
+              ...a, 
+              status: 'failed' as const,
+              lastRun: new Date().toISOString(),
+              result: { error: error.message },
+            } 
+          : a
+      );
+      await saveAutomations(errorAutomations);
+    }
+
+    setRunningId(null);
+  };
+
+  const getProfileById = (id: string) => profiles.find(p => p.id === id);
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleString();
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <ArrowPathIcon className="w-12 h-12 text-indigo-500 animate-spin mx-auto mb-4" />
+          <p className="text-slate-600 font-medium">Loading automations...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-8">
+      {/* Header */}
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/20">
+                <ComputerDesktopIcon className="w-6 h-6 text-white" />
+              </div>
+              Browser Automations
+            </h1>
+            <p className="text-slate-500 mt-2">Create AI-powered browser automations using BrowserUse</p>
+          </div>
+          
+          <button
+            onClick={() => setShowNewForm(true)}
+            disabled={!hasLLM || !pythonInstalled || !browserUseInstalled}
+            className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl font-bold hover:shadow-lg hover:shadow-purple-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <PlusIcon className="w-5 h-5" />
+            New Automation
+          </button>
+        </div>
+
+        {/* Chrome Status */}
+        {!chromeInstalled && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-6">
+            <div className="flex items-start gap-4">
+              <ExclamationCircleIcon className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-bold text-amber-800">Chrome Not Detected</h3>
+                <p className="text-amber-700 text-sm mt-1">
+                  Google Chrome or Chromium must be installed to use browser automations.
+                  Please install Chrome and restart the app.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Python & browser-use Installation Status */}
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 mb-6 shadow-sm">
+          <div className="space-y-4">
+            {/* Python Status */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <CodeBracketIcon className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900">Python Installation</h3>
+                  <p className="text-sm text-slate-500">
+                    {pythonInstalled ? (
+                      <>Version {pythonVersion} detected</>
+                    ) : (
+                      <>Python is required for browser automation</>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {pythonInstalled ? (
+                  <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium">
+                    <CheckCircleIcon className="w-4 h-4" />
+                    Installed
+                  </span>
+                ) : (
+                  <a
+                    href="https://www.python.org/downloads/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors text-sm"
+                  >
+                    Install Python
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* uv Package Manager Status */}
+            {pythonInstalled && (
+              <>
+                <div className="h-px bg-slate-200" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                      <Cog6ToothIcon className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900">uv Package Manager</h3>
+                      <p className="text-sm text-slate-500">
+                        {uvInstalled ? (
+                          <>Version {uvVersion} installed</>
+                        ) : (
+                          <>Fast Python package manager by Astral</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {uvInstalled ? (
+                      <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium">
+                        <CheckCircleIcon className="w-4 h-4" />
+                        Installed
+                      </span>
+                    ) : (
+                      <button
+                        onClick={handleInstallUv}
+                        disabled={isInstalling}
+                        className="px-4 py-2 bg-amber-600 text-white rounded-lg font-bold hover:bg-amber-700 transition-colors text-sm disabled:opacity-50"
+                      >
+                        {isInstalling ? (
+                          <span className="flex items-center gap-2">
+                            <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                            Installing...
+                          </span>
+                        ) : (
+                          'Install uv'
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* browser-use Status */}
+            {pythonInstalled && uvInstalled && (
+              <>
+                <div className="h-px bg-slate-200" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                      <GlobeAltIcon className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900">browser-use Package</h3>
+                      <p className="text-sm text-slate-500">
+                        {browserUseInstalled ? (
+                          <>Version {browserUseVersion} installed</>
+                        ) : (
+                          <>AI-powered browser automation library</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {browserUseInstalled ? (
+                      <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium">
+                        <CheckCircleIcon className="w-4 h-4" />
+                        Installed
+                      </span>
+                    ) : (
+                      <button
+                        onClick={handleInstallBrowserUse}
+                        disabled={isInstalling}
+                        className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 transition-colors text-sm disabled:opacity-50"
+                      >
+                        {isInstalling ? (
+                          <span className="flex items-center gap-2">
+                            <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                            Installing...
+                          </span>
+                        ) : (
+                          'Install browser-use'
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Installation Progress */}
+                {installProgress && (
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                    <p className="text-sm text-purple-800 font-medium">{installProgress}</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Requirements Summary */}
+            {!pythonInstalled && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                <h4 className="font-bold text-blue-900 mb-2 text-sm">Installation Instructions</h4>
+                <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                  <li>Download Python 3.11+ from <a href="https://www.python.org/downloads/" target="_blank" rel="noopener noreferrer" className="underline font-semibold">python.org</a></li>
+                  <li>Run the installer and check "Add Python to PATH"</li>
+                  <li>Restart this application</li>
+                  <li>Click "Refresh" button above to detect Python</li>
+                  <li>Install uv package manager, then browser-use</li>
+                </ol>
+              </div>
+            )}
+            
+            {pythonInstalled && !uvInstalled && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-4">
+                <h4 className="font-bold text-amber-900 mb-2 text-sm">Next Step: Install uv</h4>
+                <p className="text-sm text-amber-800">
+                  uv is a fast Python package manager that creates isolated environments.
+                  Click "Install uv" above to automatically install it.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* AI Provider Status */}
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 mb-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
+                <SparklesIcon className="w-5 h-5 text-violet-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900">AI Provider Status</h3>
+                <p className="text-sm text-slate-500">
+                  {hasLLM ? (
+                    <>Using <span className="font-semibold text-violet-600">{llmProvider}</span> for browser automation</>
+                  ) : (
+                    <>Configure your AI provider in <a href="#/settings" className="text-violet-600 hover:underline">Settings</a> to enable automations</>
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {hasLLM ? (
+                <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium">
+                  <CheckCircleIcon className="w-4 h-4" />
+                  Ready
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 text-sm text-amber-600 font-medium">
+                  <ExclamationCircleIcon className="w-4 h-4" />
+                  Not Configured
+                </span>
+              )}
+              <button
+                onClick={handleRefreshLLMStatus}
+                disabled={isChecking}
+                className="p-2 text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50"
+                title="Refresh status"
+              >
+                <ArrowPathIcon className={`w-5 h-5 ${isChecking ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Chrome Profile Selector */}
+        {chromeInstalled && profiles.length > 0 && (
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 mb-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                <UserCircleIcon className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900">Chrome Profile</h3>
+                <p className="text-sm text-slate-500">Select a profile for new automations</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {profiles.map((profile) => (
+                <button
+                  key={profile.id}
+                  onClick={() => setSelectedProfile(profile.id)}
+                  className={`p-4 rounded-xl border-2 transition-all text-left ${
+                    selectedProfile === profile.id
+                      ? 'border-violet-500 bg-violet-50'
+                      : 'border-slate-200 hover:border-slate-300 bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {profile.avatar ? (
+                      <img src={profile.avatar} className="w-10 h-10 rounded-full" alt="" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-400 to-slate-500 flex items-center justify-center text-white font-bold">
+                        {profile.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 truncate">{profile.name}</p>
+                      {profile.email && (
+                        <p className="text-xs text-slate-500 truncate">{profile.email}</p>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* New Automation Form */}
+        {showNewForm && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl">
+              <h2 className="text-2xl font-black text-slate-900 mb-6 flex items-center gap-3">
+                <SparklesIcon className="w-7 h-7 text-violet-500" />
+                Create New Automation
+              </h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Name</label>
+                  <input
+                    type="text"
+                    value={newAutomation.name}
+                    onChange={(e) => setNewAutomation({ ...newAutomation, name: e.target.value })}
+                    placeholder="e.g., Scrape Hacker News"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Description (optional)</label>
+                  <input
+                    type="text"
+                    value={newAutomation.description}
+                    onChange={(e) => setNewAutomation({ ...newAutomation, description: e.target.value })}
+                    placeholder="Brief description of what this automation does"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Task Instructions</label>
+                  <textarea
+                    value={newAutomation.task}
+                    onChange={(e) => setNewAutomation({ ...newAutomation, task: e.target.value })}
+                    placeholder="Describe what you want the AI to do in natural language. e.g., 'Go to news.ycombinator.com and extract the top 10 posts with their titles, URLs, and point counts'"
+                    rows={5}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all resize-none"
+                  />
+                </div>
+                
+                <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
+                  <UserCircleIcon className="w-5 h-5 text-slate-400" />
+                  <span className="text-sm text-slate-600">
+                    Profile: <strong>{getProfileById(selectedProfile || '')?.name || 'None selected'}</strong>
+                  </span>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 mt-8">
+                <button
+                  onClick={() => setShowNewForm(false)}
+                  className="px-6 py-3 text-slate-600 font-bold hover:bg-slate-100 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateAutomation}
+                  disabled={!newAutomation.name.trim() || !newAutomation.task.trim()}
+                  className="px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition-all disabled:opacity-50"
+                >
+                  Create Automation
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Automations List */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+            <GlobeAltIcon className="w-5 h-5 text-slate-400" />
+            Your Automations
+          </h2>
+          
+          {automations.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center">
+              <ComputerDesktopIcon className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-slate-600 mb-2">No automations yet</h3>
+              <p className="text-slate-500 mb-6">Create your first browser automation to get started</p>
+              <button
+                onClick={() => setShowNewForm(true)}
+                disabled={!hasLLM}
+                className="inline-flex items-center gap-2 px-5 py-3 bg-violet-600 text-white rounded-xl font-bold hover:bg-violet-700 transition-colors disabled:opacity-50"
+              >
+                <PlusIcon className="w-5 h-5" />
+                Create Automation
+              </button>
+            </div>
+          ) : (
+            automations.map((automation) => {
+              const profile = getProfileById(automation.profileId);
+              const isRunning = runningId === automation.id;
+              const isExpanded = expandedAutomation === automation.id;
+              
+              return (
+                <div
+                  key={automation.id}
+                  className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm"
+                >
+                  <div className="p-5">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-4">
+                        <button
+                          onClick={() => setExpandedAutomation(isExpanded ? null : automation.id)}
+                          className="mt-1 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                          {isExpanded ? (
+                            <ChevronDownIcon className="w-5 h-5" />
+                          ) : (
+                            <ChevronRightIcon className="w-5 h-5" />
+                          )}
+                        </button>
+                        <div>
+                          <h3 className="font-bold text-slate-900 text-lg">{automation.name}</h3>
+                          {automation.description && (
+                            <p className="text-slate-500 text-sm mt-1">{automation.description}</p>
+                          )}
+                          <div className="flex items-center gap-4 mt-3">
+                            <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-full ${
+                              automation.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                              automation.status === 'failed' ? 'bg-red-100 text-red-700' :
+                              automation.status === 'running' ? 'bg-blue-100 text-blue-700' :
+                              'bg-slate-100 text-slate-600'
+                            }`}>
+                              {automation.status === 'running' && <ArrowPathIcon className="w-3 h-3 animate-spin" />}
+                              {automation.status === 'completed' && <CheckCircleIcon className="w-3 h-3" />}
+                              {automation.status === 'failed' && <ExclamationCircleIcon className="w-3 h-3" />}
+                              {automation.status.charAt(0).toUpperCase() + automation.status.slice(1)}
+                            </span>
+                            {profile && (
+                              <span className="text-xs text-slate-500 flex items-center gap-1">
+                                <UserCircleIcon className="w-4 h-4" />
+                                {profile.name}
+                              </span>
+                            )}
+                            {automation.lastRun && (
+                              <span className="text-xs text-slate-400 flex items-center gap-1">
+                                <ClockIcon className="w-4 h-4" />
+                                {formatDate(automation.lastRun)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleRunAutomation(automation)}
+                          disabled={isRunning || !hasLLM}
+                          className={`p-2.5 rounded-xl transition-all ${
+                            isRunning
+                              ? 'bg-blue-100 text-blue-600'
+                              : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
+                          } disabled:opacity-50`}
+                          title={isRunning ? 'Running...' : 'Run automation'}
+                        >
+                          {isRunning ? (
+                            <ArrowPathIcon className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <PlayIcon className="w-5 h-5" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAutomation(automation.id)}
+                          disabled={isRunning}
+                          className="p-2.5 bg-slate-100 text-slate-500 rounded-xl hover:bg-red-100 hover:text-red-600 transition-all disabled:opacity-50"
+                          title="Delete automation"
+                        >
+                          <TrashIcon className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {isExpanded && (
+                    <div className="border-t border-slate-100 bg-slate-50 p-5">
+                      <div className="mb-4">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Task Instructions</h4>
+                        <p className="text-sm text-slate-700 bg-white p-3 rounded-lg border border-slate-200">
+                          {automation.task}
+                        </p>
+                      </div>
+                      
+                      {isRunning && runningSteps.length > 0 && (
+                        <div className="mb-4">
+                          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Live Progress</h4>
+                          <div className="bg-white rounded-lg border border-slate-200 p-3 max-h-48 overflow-y-auto space-y-1">
+                            {runningSteps.map((step, idx) => (
+                              <div key={idx} className="text-xs text-slate-600 py-1">
+                                • {step}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {automation.result && (
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Last Result</h4>
+                          <pre className="text-xs text-slate-700 bg-white p-3 rounded-lg border border-slate-200 overflow-x-auto">
+                            {JSON.stringify(automation.result, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+        
+        {/* Info Section */}
+        <div className="mt-8 bg-gradient-to-br from-violet-50 to-purple-50 rounded-3xl border border-violet-200 p-6">
+          <h3 className="font-bold text-violet-900 mb-3 flex items-center gap-2">
+            <SparklesIcon className="w-5 h-5" />
+            About Browser Automations
+          </h3>
+          <div className="text-sm text-violet-800 space-y-2">
+            <p>
+              Browser automations use your configured AI (Gemini or OpenRouter) to generate detailed
+              step-by-step instructions for web-based tasks. Simply describe what you want to accomplish,
+              and the AI will create a plan for you.
+            </p>
+            <p>
+              <strong>Examples of tasks you can automate:</strong>
+            </p>
+            <ul className="list-disc list-inside pl-2 space-y-1">
+              <li>Scrape product information from e-commerce websites</li>
+              <li>Extract articles and news from websites</li>
+              <li>Fill out forms and submit applications</li>
+              <li>Search for information across multiple sites</li>
+              <li>Monitor websites for changes</li>
+            </ul>
+            <p className="mt-4 bg-violet-100 p-3 rounded-lg">
+              <strong>Note:</strong> This feature currently generates AI-powered automation instructions.
+              Automatic browser control with Puppeteer will be added in a future update.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

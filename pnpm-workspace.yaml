@@ -1,0 +1,9 @@
+onlyBuiltDependencies:
+  - better-sqlite3
+  - bufferutil
+  - electron
+  - es5-ext
+  - esbuild
+  - protobufjs
+  - puppeteer
+  - utf-8-validate

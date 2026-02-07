@@ -1,0 +1,87 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; media-src 'self' blob:; connect-src 'self' https://generativelanguage.googleapis.com https://*.google.com https://oauth2.googleapis.com https://gmail.googleapis.com https://www.googleapis.com https://openrouter.ai https://api.github.com https://api.resend.com https://api.elevenlabs.io https://discord.com https://*.discord.com;">
+  <title>aethermsaid hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    
+    /* Custom prose styles for the digest */
+    .digest-prose h3 {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: #1e293b;
+    }
+    .digest-prose p {
+      margin-bottom: 0.75rem;
+      font-size: 0.875rem;
+      line-height: 1.5;
+      color: #475569;
+    }
+    .digest-prose ul {
+      list-style-type: disc;
+      padding-left: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .digest-prose li {
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+      color: #475569;
+    }
+    .digest-prose strong {
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    /* Sidebar specific markdown styles */
+    .sidebar-prose p {
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+      line-height: 1.5;
+      color: #ffffff;
+    }
+    .sidebar-prose li {
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      color: #ffffff;
+    }
+    .sidebar-prose strong {
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .sidebar-prose ul {
+      list-style-type: disc;
+      padding-left: 1.25rem;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+  <div id="root"></div>
+  <script type="module" src="/src/index.tsx"></script>
+</body>
+</html>
