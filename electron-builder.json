@@ -12,7 +12,7 @@
       "to": "icons/icon.png"
     }
   ],
-  "npmRebuild": true,
+  "npmRebuild": false,
   "nodeGypRebuild": false,
   "buildDependenciesFromSource": false,
   "directories": {

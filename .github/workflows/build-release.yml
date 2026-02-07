@@ -54,8 +54,11 @@ jobs:
       - name: Build Electron app
         run: pnpm run build:electron
 
+      - name: Rebuild native modules for Electron
+        run: npx @electron/rebuild -f -w better-sqlite3
+
       - name: Package for ${{ matrix.platform }}
-        run: pnpm run package:${{ matrix.platform }}
+        run: npx electron-builder --${{ matrix.platform }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
