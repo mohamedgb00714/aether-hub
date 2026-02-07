@@ -17,15 +17,84 @@
 
 ---
 
-aether hub synchronizes multiple accounts (Gmail, Outlook, Slack, WhatsApp, Telegram, Discord, GitHub) and uses AI to generate insights across all your communications and schedule — **entirely on your machine**.
+**Transform your digital life with AI-powered automation and intelligence.**
+
+aether hub is your all-in-one productivity powerhouse that synchronizes multiple accounts (Gmail, Outlook, Slack, WhatsApp, Telegram, Discord, GitHub), uses cutting-edge AI to generate actionable insights across all your communications and schedule, and puts you in complete control with **voice commands** — **entirely on your machine**, with **zero cloud dependency**.
+
+🎤 **Control everything with your voice** • 🤖 **6 AI providers supported** • 🔒 **100% private & local** • 🚀 **Extensible & Open Source**
+
+## ❤️ Why I Built This
+
+I built aether hub for my own daily needs.
+
+I was tired of switching between Gmail, WhatsApp, Telegram, Discord, and notes apps. I wanted one private place where everything works together — with AI — without selling my data.
+
+I didn't have money for expensive tools or ads. So I built my own.
+
+Now I'm sharing it with everyone.
+
+## 🎬 Quick Demo
+
+> 60-second overview of aether hub in action
+
+[▶️ Watch Demo](https://github.com/mohamedgb00714/aether-hub/releases) *(Coming soon — video in production)*
 
 ## 🛡️ Privacy & Security First
 
-- **Local Storage** — All data lives in a local SQLite database on your machine
-- **Local Encryption** — API keys and sensitive data encrypted via Electron `safeStorage` (OS keychain)
-- **Stateless AI** — AI requests are stateless; your data is never used for training
-- **Local AI Support** — Use **Ollama** or **Local AI** to keep everything 100% on your hardware
-- **No Telemetry** — Zero analytics, zero tracking
+<div align="center">
+
+| 🗄️ **Local Storage** | 🔐 **Encrypted** | 🤖 **Stateless AI** | 💻 **Local AI Ready** | 🚫 **No Telemetry** |
+|:---:|:---:|:---:|:---:|:---:|
+| All data in SQLite on your machine | Keys secured via OS keychain | Never used for training | Ollama & Local AI support | Zero tracking |
+
+</div>
+
+**Your data stays yours.** Everything runs locally with optional cloud AI — you choose.
+
+## 🌟 Why aether hub?
+
+<table>
+<tr>
+<td width="50%">
+
+### 🎯 All-in-One Solution
+No more switching between 10+ apps. Emails, messages, calendar, tasks, notes — all unified with AI-powered insights in one beautiful interface.
+
+</td>
+<td width="50%">
+
+### 🧠 True AI Assistant
+Not just a chatbot. LangChain agent with 26+ tools understands your entire digital life and takes contextual action across all platforms.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 🎙️ Voice-First Experience
+Speak naturally to control everything. Create tasks, send emails, search knowledge base, automate workflows — hands-free.
+
+</td>
+<td width="50%">
+
+### ⚡ Automate Everything
+Schedule browser automation to scrape data, monitor websites, fill forms. Run complex multi-step workflows while you sleep.
+
+</td>
+</tr>
+</table>
+
+## 👥 Who Is This For?
+
+aether hub is built for:
+
+- **Developers & makers** managing multiple GitHub accounts and communications
+- **Freelancers** juggling client emails, messages, and schedules
+- **Students** organizing research, notes, and academic communications
+- **Privacy-conscious users** who refuse to let big tech monetize their data
+- **Anyone managing 5+ apps daily** and losing hours to context switching
+
+If you use multiple apps every day and value your privacy — this is for you.
 
 ## ⚠️ Disclaimer on Third-Party Services
 
@@ -39,6 +108,8 @@ These integrations:
 - Are **disabled by default** via environment variables
 
 By enabling these features, you acknowledge and accept all associated risks. The authors assume **no responsibility** for account bans, data loss, or policy violations.
+
+**Users are responsible for ensuring compliance with local laws and platform policies.**
 
 ## ✨ Features
 
@@ -56,6 +127,32 @@ By enabling these features, you acknowledge and accept all associated risks. The
 | **Floating Widgets** | System-wide microphone overlay and sticky notes |
 | **Email Campaigns** | Resend integration for email sending and campaigns |
 | **YouTube Analysis** | Channel tracking, RSS feeds, transcript extraction |
+| **Voice Control** | 🎤 Hands-free control with speech recognition and synthesis |
+| **...and much more!** | *Custom shortcuts, folder organization, cross-platform search, clipboard history, and 50+ additional features built-in* |
+
+## 📸 Screenshots
+
+<div align="center">
+
+### Dashboard
+<img src="screenshots/dashboard.png" alt="Dashboard" width="800"/>
+
+### Floating Chat
+<img src="screenshots/floating chat over others apps.png" alt="Floating Chat over other apps" width="800"/>
+
+### Knowledge Base
+<img src="screenshots/knowledgebase.png" alt="Knowledge Base" width="800"/>
+
+### Keep Notes
+<img src="screenshots/keepnotes.png" alt="Keep Notes" width="800"/>
+
+### Automations
+<img src="screenshots/automations.png" alt="Automations" width="800"/>
+
+### Automation Results
+<img src="screenshots/automations results.png" alt="Automation Results" width="800"/>
+
+</div>
 
 ## 🚀 Getting Started
 
@@ -180,6 +277,17 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
 ## 🔒 Security
 
 Found a vulnerability? Please report it privately — see [SECURITY.md](SECURITY.md).
+
+## ⭐ Support the Project
+
+If aether hub helps you:
+
+- **Give it a ⭐** — It motivates me to keep improving it
+- **Share it** with friends who value privacy
+- **Open issues** with ideas, bugs, or feature requests
+- **Contribute** code or documentation
+
+Your support makes a real difference ❤️
 
 ## 📄 License
 
