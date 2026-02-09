@@ -760,9 +760,10 @@ const WHISPER_MODELS = [
 ];
 
 let cachedWhisperPath: string | null = null;
+let whisperSearchLogged = false;
 
-// Get whisper binary path based on platform
-function getWhisperBinaryPath(): string | null {
+// Get whisper binary path based on platform (silent mode - only logs when found or on error)
+function getWhisperBinaryPath(verbose: boolean = false): string | null {
   if (cachedWhisperPath && fs.existsSync(cachedWhisperPath)) {
     return cachedWhisperPath;
   }
@@ -803,12 +804,18 @@ function getWhisperBinaryPath(): string | null {
         const output = execSync(testCmd, { encoding: 'utf8', env: process.env, stdio: ['ignore', 'pipe', 'ignore'] });
         
         if (output.includes('usage:') || output.includes('options:')) {
-           console.log(`✅ WHISPER: Verified working binary at ${binPath}`);
+           if (verbose || !whisperSearchLogged) {
+             console.log(`✅ WHISPER: Verified working binary at ${binPath}`);
+             whisperSearchLogged = true;
+           }
            cachedWhisperPath = binPath;
            return binPath;
         }
       } catch (error) {
-        console.warn(`⚠️ WHISPER: Binary at ${binPath} exists but failed test:`, error instanceof Error ? error.message : String(error));
+        // Silent unless verbose - most users don't have whisper installed
+        if (verbose) {
+          console.warn(`⚠️ WHISPER: Binary at ${binPath} exists but failed test:`, error instanceof Error ? error.message : String(error));
+        }
       }
     }
   }
@@ -816,15 +823,16 @@ function getWhisperBinaryPath(): string | null {
   // Try to find in PATH
   try {
     const binaryNames = ['whisper-cpp.cli', 'whisper-cpp', 'whisper', 'whisper-cli', 'main'];
-    const pathEnv = process.env.PATH || '';
-    console.log(`🔵 WHISPER: Searching in PATH: ${pathEnv.substring(0, 50)}...`);
 
     for (const name of binaryNames) {
       try {
         const whichCmd = process.platform === 'win32' ? `where ${name}` : `which ${name}`;
         const result = execSync(whichCmd, { encoding: 'utf8', env: process.env }).trim().split('\n')[0];
         if (result && fs.existsSync(result)) {
-          console.log(`✅ WHISPER: Found binary "${name}" via which: ${result}`);
+          if (verbose || !whisperSearchLogged) {
+            console.log(`✅ WHISPER: Found binary "${name}" via which: ${result}`);
+            whisperSearchLogged = true;
+          }
           cachedWhisperPath = result;
           return result;
         }
@@ -833,10 +841,17 @@ function getWhisperBinaryPath(): string | null {
       }
     }
   } catch (error) {
-    console.warn('🟡 WHISPER: Error searching for binary in PATH:', error);
+    if (verbose) {
+      console.warn('🟡 WHISPER: Error searching for binary in PATH:', error);
+    }
   }
 
-  console.warn('❌ WHISPER: No binary found in any common locations or PATH');
+  // Only log "not found" once, or when verbose (user actively using whisper)
+  if (verbose && !whisperSearchLogged) {
+    console.warn('❌ WHISPER: No binary found in any common locations or PATH');
+    whisperSearchLogged = true;
+  }
+  
   return null;
 }
 
@@ -892,7 +907,8 @@ async function convertToWav(inputBuffer: ArrayBuffer, outputPath: string): Promi
 }
 
 ipcMain.handle('whisper:checkInstalled', async () => {
-  const whisperPath = getWhisperBinaryPath();
+  // Pass verbose=true since user is actively checking Whisper status
+  const whisperPath = getWhisperBinaryPath(true);
   const modelPath = getDefaultModelPath();
   const hasFfmpeg = isFfmpegInstalled();
 
@@ -913,7 +929,8 @@ ipcMain.handle('whisper:checkInstalled', async () => {
 });
 
 ipcMain.handle('whisper:transcribe', async (_event, audioData: ArrayBuffer) => {
-  const whisperPath = getWhisperBinaryPath();
+  // Pass verbose=true since user is actively trying to transcribe
+  const whisperPath = getWhisperBinaryPath(true);
   const modelPath = getDefaultModelPath();
 
   if (!whisperPath) {
