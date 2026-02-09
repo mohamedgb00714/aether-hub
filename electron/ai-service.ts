@@ -92,7 +92,8 @@ function getProviderConfig(provider: AIProvider) {
       model: store.get('ollama_model', 'llama3.2') as string,
       endpoint: () => {
         const url = store.get('ollama_url', 'http://localhost:11434') as string;
-        return `${url}/v1/chat/completions`;
+        // Use native Ollama API for maximum compatibility (works on all versions)
+        return `${url}/api/generate`;
       },
     },
     local: {
@@ -184,7 +185,24 @@ function getRequestBody(
     };
   }
 
-  // OpenRouter, OpenAI, Ollama, Local AI use OpenAI-compatible format
+  // Ollama uses native format for maximum compatibility
+  if (provider === 'ollama') {
+    const fullPrompt = systemInstruction 
+      ? `${systemInstruction}\n\n${prompt}`
+      : prompt;
+    
+    return {
+      model,
+      prompt: fullPrompt,
+      stream: false,
+      options: {
+        temperature,
+        num_predict: maxTokens,
+      }
+    };
+  }
+
+  // OpenRouter, OpenAI, Local AI use OpenAI-compatible format
   const messages: Array<{role: string, content: string}> = [];
   
   if (systemInstruction) {
@@ -211,8 +229,11 @@ function parseResponse(provider: AIProvider, data: any): string {
         return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       case 'anthropic':
         return data.content?.[0]?.text || '';
+      case 'ollama':
+        // Ollama native API returns { response: "..." }
+        return data.response || '';
       default:
-        // OpenRouter, OpenAI, Ollama, Local AI
+        // OpenRouter, OpenAI, Local AI
         return data.choices?.[0]?.message?.content || '';
     }
   } catch (error) {

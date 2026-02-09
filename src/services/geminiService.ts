@@ -602,7 +602,8 @@ async function callAnthropic(prompt: string, systemInstruction?: string): Promis
 
 /**
  * Call Ollama (local AI)
- * Uses OpenAI-compatible endpoint for consistency with other providers
+ * Uses native Ollama API (/api/generate) for maximum compatibility
+ * Note: /v1/chat/completions requires Ollama v0.1.17+ 
  */
 async function callOllama(prompt: string, systemInstruction?: string): Promise<string> {
   const ollamaUrl = await storage.get(STORAGE_KEYS.OLLAMA_URL) || DEFAULT_OLLAMA_URL;
@@ -614,18 +615,15 @@ async function callOllama(prompt: string, systemInstruction?: string): Promise<s
     : temporalContext;
 
   try {
-    // Use OpenAI-compatible endpoint (Ollama supports both native and OpenAI-compatible APIs)
-    const response = await fetch(`${ollamaUrl}/v1/chat/completions`, {
+    // Use native Ollama API for maximum compatibility across all versions
+    const response = await fetch(`${ollamaUrl}/api/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model,
-        messages: [
-          { role: 'system', content: finalSystemInstruction },
-          { role: 'user', content: prompt }
-        ],
+        prompt: `${finalSystemInstruction}\n\n${prompt}`,
         stream: false,
       })
     });
@@ -637,7 +635,7 @@ async function callOllama(prompt: string, systemInstruction?: string): Promise<s
     }
 
     const data = await response.json();
-    return data.choices?.[0]?.message?.content || "Unable to generate response.";
+    return data.response || "Unable to generate response.";
   } catch (error) {
     console.error("Ollama API error:", error);
     return "Error communicating with Ollama. Make sure Ollama is running on " + ollamaUrl;
