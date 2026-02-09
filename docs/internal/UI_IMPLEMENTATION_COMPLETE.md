@@ -219,7 +219,7 @@ const blob = new Blob([markdownText], { type: 'text/markdown' });
 const url = URL.createObjectURL(blob);
 const a = document.createElement('a');
 a.href = url;
-a.download = `nexus-digest-${date}.md`;
+a.download = `aether-hub-digest-${date}.md`;
 a.click();
 ```
 

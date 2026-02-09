@@ -133,7 +133,7 @@ const StatusBadge = ({ status }: { status: Account['status'] }) => {
       return (
         <span 
           className={`${baseClasses} bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100`}
-          title="Active connection: Nexus is receiving live data updates from this platform."
+          title="Active connection: aether-hub is receiving live data updates from this platform."
         >
           <div className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -544,7 +544,7 @@ const AccountsPage: React.FC = () => {
       }
       
       // Save token to storage
-      const existingKeys = await storage.get('nexus_keys_github') || {};
+      const existingKeys = await storage.get('aether-hub_keys_github') || {};
       await storage.set('nexus_keys_github', {
         ...existingKeys,
         'Personal Access Token': githubToken.trim()
@@ -661,7 +661,7 @@ const AccountsPage: React.FC = () => {
       
       // If it's a GitHub account, clear token and cached data
       if (account?.platform === 'github') {
-        await storage.remove('nexus_keys_github');
+        await storage.remove('aether-hub_keys_github');
         await storage.remove('github_issues');
         await storage.remove('github_prs');
         await storage.remove('github_repos');

@@ -52,7 +52,7 @@ Successfully converted aethermsaid hub from a web-based React app to a full-feat
 ### 6. **Assets & Configuration**
 - ✅ Placeholder icons created (icon.png, icon.ico, icon.icns)
 - ✅ macOS entitlements file for code signing
-- ✅ File associations (`.nexus` files)
+- ✅ File associations (`.aether-hub` files)
 - ✅ Updated .gitignore for build outputs
 - ✅ TypeScript types for Electron API (`types.ts`)
 

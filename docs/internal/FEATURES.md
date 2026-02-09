@@ -119,7 +119,7 @@
 ## Distribution & Updates
 *   **Platform Support**: Windows (NSIS), macOS (DMG - Intel & ARM), Linux (AppImage & DEB).
 *   **Linux Compliance**: Explicit `Office;Productivity` category assignment for `.desktop` file generation.
-*   **File Associations**: Registered association with `.nexus` file extensions for Knowledge Base files.
+*   **File Associations**: Registered association with `.aether-hub` file extensions for Knowledge Base files.
 
 ## Known Limitations
 *   **Self-Bot Warnings**: Discord integration carries risk of account suspension.

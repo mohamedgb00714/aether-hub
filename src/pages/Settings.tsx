@@ -1759,7 +1759,7 @@ const IntegrationCard = ({ platform, fieldKeys }: { platform: string, fieldKeys:
 
   useEffect(() => {
     const loadSaved = async () => {
-      const saved = await storage.get(`nexus_keys_${platform.toLowerCase()}`);
+      const saved = await storage.get(`aether-hub_keys_${platform.toLowerCase()}`);
       if (saved) setValues(saved);
     };
     loadSaved();
@@ -1768,7 +1768,7 @@ const IntegrationCard = ({ platform, fieldKeys }: { platform: string, fieldKeys:
   const handleSave = async () => {
     setIsSaving(true);
     setTimeout(async () => {
-      await storage.set(`nexus_keys_${platform.toLowerCase()}`, values);
+      await storage.set(`aether-hub_keys_${platform.toLowerCase()}`, values);
       setIsSaving(false);
       setIsSuccess(true);
       setTimeout(() => setIsSuccess(false), 2000);
@@ -3556,7 +3556,7 @@ const SettingsPage: React.FC = () => {
           {activeTab === 'privacy' && (
             <SettingSection title="Privacy & Security" icon={ShieldCheckIcon}>
               <Toggle 
-                label="Nexus Stateless Inference" 
+                label="aether-hub Stateless Inference" 
                 description="When enabled, your data context is purged from the processing buffer immediately after each AI request." 
                 enabled={privacyMode} 
                 onChange={setPrivacyMode} 

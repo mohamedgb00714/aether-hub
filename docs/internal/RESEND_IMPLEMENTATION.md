@@ -8,7 +8,7 @@ Implemented complete Resend email campaign system with multi-account support, AI
 ### 1. **Multi-Account Resend Support**
 - Resend moved from Settings to Connections (Accounts page)
 - Each Resend account has its own API key stored securely
-- API keys stored at: `nexus_keys_resend_${accountId}`
+- API keys stored at: `aether-hub_keys_resend_${accountId}`
 - Users can connect multiple Resend accounts with different API keys
 
 ### 2. **Resend Campaign Page** (`/resend`)
@@ -159,7 +159,7 @@ interface ElectronAPI {
 4. Enter API key from https://resend.com/api-keys
 5. Click **"Validate & Connect"**
 6. Account created with `category: 'email'` and `platform: 'resend'`
-7. API key stored at `nexus_keys_resend_${accountId}`
+7. API key stored at `aether-hub_keys_resend_${accountId}`
 
 ### Sending Email Campaign
 1. Navigate to **Resend** page

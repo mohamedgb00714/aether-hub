@@ -426,7 +426,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           <div className="p-8 shrink-0">
             <div className="flex items-center space-x-3">
               <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-100">N</div>
-              <span className="font-black text-2xl tracking-tight text-slate-900">Nexus<span className="text-indigo-600">AI</span></span>
+              <span className="font-black text-2xl tracking-tight text-slate-900">aether-hub<span className="text-indigo-600">AI</span></span>
             </div>
           </div>
 

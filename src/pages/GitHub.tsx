@@ -139,7 +139,7 @@ const GitHubPage: React.FC = () => {
       }
     } else {
       // Check for legacy token in storage
-      const savedKeys = await storage.get('nexus_keys_github') as Record<string, string> | null;
+      const savedKeys = await storage.get('aether-hub_keys_github') as Record<string, string> | null;
       const githubToken = savedKeys?.['Personal Access Token'];
       
       if (githubToken) {
@@ -240,8 +240,8 @@ const GitHubPage: React.FC = () => {
     if (!tokenInput.trim()) return;
     
     // Save to storage for backward compatibility
-    const existingKeys = await storage.get('nexus_keys_github') as Record<string, string> || {};
-    await storage.set('nexus_keys_github', { ...existingKeys, 'Personal Access Token': tokenInput });
+    const existingKeys = await storage.get('aether-hub_keys_github') as Record<string, string> || {};
+    await storage.set('aether-hub_keys_github', { ...existingKeys, 'Personal Access Token': tokenInput });
     setToken(tokenInput);
     
     // Create GitHub account in database

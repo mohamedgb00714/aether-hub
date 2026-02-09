@@ -26,6 +26,9 @@ importers:
       '@langchain/openai':
         specifier: ^1.2.0
         version: 1.2.2(@langchain/core@1.1.15(openai@6.16.0(ws@8.19.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.3.5)))(ws@8.19.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+      '@puppeteer/browsers':
+        specifier: ^2.12.0
+        version: 2.12.0
       '@types/node-cron':
         specifier: ^3.0.11
         version: 3.0.11
@@ -41,6 +44,9 @@ importers:
       builder-util-runtime:
         specifier: ^9.2.7
         version: 9.5.1
+      cosmiconfig:
+        specifier: ^9.0.0
+        version: 9.0.0(typescript@5.8.3)
       debug:
         specifier: ^4.4.3
         version: 4.4.3
@@ -95,6 +101,9 @@ importers:
       puppeteer:
         specifier: ^24.37.2
         version: 24.37.2(bufferutil@4.1.0)(typescript@5.8.3)(utf-8-validate@5.0.10)
+      puppeteer-core:
+        specifier: ^24.37.2
+        version: 24.37.2(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4

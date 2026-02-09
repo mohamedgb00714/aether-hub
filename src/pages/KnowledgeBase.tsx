@@ -99,7 +99,7 @@ const KnowledgeBase: React.FC = () => {
         const welcomeMsg: Message = { 
           id: '1', 
           role: 'assistant' as const, 
-          content: "Hi! I'm here to learn everything about you so I can personalize your entire Nexus experience. Think of this as a casual conversation where I'll ask questions to understand your work, preferences, schedule, and communication style.\n\nLet's start with something simple: **What do you do for work, and what's a typical day like for you?**", 
+          content: "Hi! I'm here to learn everything about you so I can personalize your entire aether-hub experience. Think of this as a casual conversation where I'll ask questions to understand your work, preferences, schedule, and communication style.\n\nLet's start with something simple: **What do you do for work, and what's a typical day like for you?**", 
           timestamp: new Date().toLocaleTimeString() 
         };
         setMessages([welcomeMsg]);
@@ -114,7 +114,7 @@ const KnowledgeBase: React.FC = () => {
       if (dbInsights && dbInsights.length > 0) {
         setInsights(dbInsights);
       } else {
-        const defaultInsight = { id: 'i1', category: 'Identity', fact: 'Premium Nexus User' };
+        const defaultInsight = { id: 'i1', category: 'Identity', fact: 'Premium aether-hub User' };
         setInsights([defaultInsight]);
         await db.knowledgeInsights.create(defaultInsight);
       }
@@ -225,7 +225,7 @@ INSTRUCTIONS:
               <h2 className="text-xl font-black text-slate-900 tracking-tight">Context Discovery</h2>
               <div 
                 className="flex items-center gap-2 cursor-help group/session"
-                title="Active Profiling: Nexus is listening for new information to build your workspace identity. Every detail helps better filter your dashboard."
+                title="Active Profiling: aether-hub is listening for new information to build your workspace identity. Every detail helps better filter your dashboard."
               >
                 <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse group-hover/session:scale-125 transition-transform"></span>
                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest group-hover/session:text-emerald-500 transition-colors">Active Profiling Session</p>
@@ -293,7 +293,7 @@ INSTRUCTIONS:
       <div className="w-[400px] flex flex-col gap-8 shrink-0">
         <div 
           className="bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm relative overflow-hidden cursor-help hover:shadow-lg transition-all"
-          title="Knowledge Maturity: As Nexus learns more about your goals and context, its ability to prioritize and summarize increases. Talk to the Discovery Agent to raise this score."
+          title="Knowledge Maturity: As aether-hub learns more about your goals and context, its ability to prioritize and summarize increases. Talk to the Discovery Agent to raise this score."
         >
           <div className="relative z-10">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8">Profile Status</h3>
