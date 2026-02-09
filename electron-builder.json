@@ -1,6 +1,6 @@
 {
   "appId": "com.aethermsaid.hub",
-  "productName": "aethermsaid hub",
+  "productName": "aether-hub",
   "copyright": "Copyright © 2026 aethermsaid hub",
   "asar": true,
   "asarUnpack": [
@@ -38,7 +38,7 @@
       }
     ],
     "icon": "build/icons/icon.ico",
-    "artifactName": "${productName}-${version}-${arch}-setup.${ext}",
+    "artifactName": "aether-hub-${version}-${arch}-setup.${ext}",
     "publisherName": "msaid mohamed el hadi"
   },
   "nsis": {
@@ -57,7 +57,7 @@
     ],
     "icon": "build/icons/icon.icns",
     "category": "public.app-category.productivity",
-    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "artifactName": "aether-hub-${version}-${arch}.${ext}",
     "hardenedRuntime": true,
     "gatekeeperAssess": false,
     "entitlements": "build/entitlements.mac.plist",
@@ -83,13 +83,23 @@
   },
   "linux": {
     "executableName": "aether-hub",
+    "desktop": {
+      "Name": "aethermsaid hub",
+      "GenericName": "AI Productivity Hub"
+    },
     "target": [
-      "AppImage",
-      "deb"
+      {
+        "target": "AppImage",
+        "arch": ["x64"]
+      },
+      {
+        "target": "deb",
+        "arch": ["x64"]
+      }
     ],
     "icon": "build/icons",
     "category": "Office;Productivity",
-    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "artifactName": "aether-hub-${version}-${arch}.${ext}",
     "synopsis": "AI-powered personal productivity hub",
     "description": "aethermsaid hub brings together your emails, calendar, and knowledge in one intelligent interface."
   },
