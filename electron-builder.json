@@ -82,6 +82,7 @@
     }
   },
   "linux": {
+    "executableName": "aether-hub",
     "target": [
       "AppImage",
       "deb"
