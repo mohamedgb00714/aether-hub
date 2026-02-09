@@ -39,18 +39,39 @@ class BrowserAutomationService {
    * Check if LLM is configured
    */
   async hasLLMConfigured(): Promise<boolean> {
-    // Check if Gemini API key is set
-    const geminiKey = await storage.get(STORAGE_KEYS.GEMINI_API_KEY);
-    if (geminiKey) return true;
-
-    // Check if OpenRouter is configured
-    const aiProvider = await storage.get(STORAGE_KEYS.AI_PROVIDER);
-    if (aiProvider && aiProvider !== 'gemini') {
-      const openRouterKey = await storage.get(STORAGE_KEYS.OPENROUTER_API_KEY);
-      return !!openRouterKey;
+    const aiProvider = await storage.get(STORAGE_KEYS.AI_PROVIDER) as string || 'google';
+    
+    switch (aiProvider) {
+      case 'google':
+      case 'gemini': {
+        const geminiKey = await storage.get(STORAGE_KEYS.GEMINI_API_KEY);
+        return !!geminiKey;
+      }
+      case 'openrouter': {
+        const openRouterKey = await storage.get(STORAGE_KEYS.OPENROUTER_API_KEY);
+        return !!openRouterKey;
+      }
+      case 'openai': {
+        const openaiKey = await storage.get(STORAGE_KEYS.OPENAI_API_KEY);
+        return !!openaiKey;
+      }
+      case 'anthropic': {
+        const anthropicKey = await storage.get(STORAGE_KEYS.ANTHROPIC_API_KEY);
+        return !!anthropicKey;
+      }
+      case 'ollama': {
+        // Ollama doesn't need API key, just check if URL is configured
+        const ollamaUrl = await storage.get(STORAGE_KEYS.OLLAMA_URL);
+        return true; // Ollama is always "configured" if selected
+      }
+      case 'local': {
+        // Local AI needs at least URL configured
+        const localUrl = await storage.get(STORAGE_KEYS.LOCAL_AI_URL);
+        return !!localUrl;
+      }
+      default:
+        return false;
     }
-
-    return false;
   }
 
   /**
@@ -93,7 +114,7 @@ class BrowserAutomationService {
   }): Promise<TaskResult> {
     const hasLLM = await this.hasLLMConfigured();
     if (!hasLLM) {
-      throw new Error('No AI provider configured. Please configure Gemini or OpenRouter in Settings.');
+      throw new Error('No AI provider configured. Please configure an AI provider (Google, OpenRouter, OpenAI, Anthropic, Ollama, or Local AI) in Settings.');
     }
 
     const steps: string[] = [];

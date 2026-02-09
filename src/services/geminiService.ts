@@ -602,6 +602,8 @@ async function callAnthropic(prompt: string, systemInstruction?: string): Promis
 
 /**
  * Call Ollama (local AI)
+ * Uses native Ollama API (/api/generate) for maximum compatibility
+ * Note: /v1/chat/completions requires Ollama v0.1.17+ 
  */
 async function callOllama(prompt: string, systemInstruction?: string): Promise<string> {
   const ollamaUrl = await storage.get(STORAGE_KEYS.OLLAMA_URL) || DEFAULT_OLLAMA_URL;
@@ -613,6 +615,7 @@ async function callOllama(prompt: string, systemInstruction?: string): Promise<s
     : temporalContext;
 
   try {
+    // Use native Ollama API for maximum compatibility across all versions
     const response = await fetch(`${ollamaUrl}/api/generate`, {
       method: 'POST',
       headers: {
@@ -626,7 +629,9 @@ async function callOllama(prompt: string, systemInstruction?: string): Promise<s
     });
 
     if (!response.ok) {
-      return "Error: Unable to connect to Ollama. Make sure Ollama is running.";
+      const errorText = await response.text();
+      console.error('Ollama API error:', errorText);
+      return "Error: Unable to connect to Ollama. Make sure Ollama is running and accessible at " + ollamaUrl;
     }
 
     const data = await response.json();
