@@ -110,25 +110,37 @@ aethermsaid hub supports **6 AI providers** for flexible, multi-model AI capabil
 
 ## API Endpoint Formats
 
-All providers use consistent request/response formats internally:
+All providers are properly implemented with their native/preferred APIs:
 
 ### Google Gemini
 - **Endpoint**: `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}`
 - **Format**: Native Gemini API
+- **Request**: `{ contents: [...], generationConfig: {...} }`
 
-### OpenRouter, OpenAI, Anthropic
+### OpenRouter, OpenAI
 - **Endpoint**: Provider-specific
-- **Format**: OpenAI Chat Completions format
+- **Format**: OpenAI Chat Completions
+- **Request**: `{ model, messages: [...], temperature, max_tokens }`
 - **Authentication**: Bearer token in header
 
+### Anthropic
+- **Endpoint**: `https://api.anthropic.com/v1/messages`
+- **Format**: Native Anthropic API
+- **Request**: `{ model, messages: [...], system, max_tokens }`
+- **Authentication**: `x-api-key` header
+
 ### Ollama
-- **Endpoint**: `{ollamaUrl}/v1/chat/completions`
-- **Format**: OpenAI Chat Completions (compatible)
+- **Endpoint**: `{ollamaUrl}/api/generate`
+- **Format**: Native Ollama API (maximum compatibility)
+- **Request**: `{ model, prompt, stream: false }`
+- **Response**: `{ response: "..." }`
 - **Authentication**: None required
+- **Note**: Works on all Ollama versions. The `/v1/chat/completions` OpenAI-compatible endpoint only exists in v0.1.17+
 
 ### Local AI
 - **Endpoint**: `{localUrl}/v1/chat/completions`
 - **Format**: OpenAI Chat Completions (compatible)
+- **Request**: `{ model, messages: [...], temperature, max_tokens }`
 - **Authentication**: Bearer token (if configured)
 
 ## Configuration in UI

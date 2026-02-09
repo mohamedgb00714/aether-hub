@@ -127,15 +127,38 @@ After configuration, test Ollama in:
 
 ## API Endpoints Used
 
-| Provider | Test Endpoint | AI Call Endpoint |
-|----------|---------------|------------------|
-| **Ollama** (test) | `GET {url}/api/tags` | - |
-| **Ollama** (AI call) | - | `POST {url}/v1/chat/completions` |
-| Google | - | `POST https://generativelanguage.googleapis.com/...` |
-| OpenRouter | - | `POST https://openrouter.ai/api/v1/chat/completions` |
-| OpenAI | - | `POST https://api.openai.com/v1/chat/completions` |
-| Anthropic | - | `POST https://api.anthropic.com/v1/messages` |
-| Local AI | - | `POST {url}/v1/chat/completions` |
+| Provider | Test Endpoint | AI Call Endpoint | Format |
+|----------|---------------|------------------|--------|
+| **Ollama** (test) | `GET {url}/api/tags` | - | Native Ollama |
+| **Ollama** (AI call) | - | `POST {url}/api/generate` | Native Ollama |
+| Google | - | `POST https://generativelanguage.googleapis.com/...` | Gemini API |
+| OpenRouter | - | `POST https://openrouter.ai/api/v1/chat/completions` | OpenAI-compatible |
+| OpenAI | - | `POST https://api.openai.com/v1/chat/completions` | OpenAI native |
+| Anthropic | - | `POST https://api.anthropic.com/v1/messages` | Anthropic native |
+| Local AI | - | `POST {url}/v1/chat/completions` | OpenAI-compatible |
+
+### Ollama API Format
+
+**Request** (native format - works on all Ollama versions):
+```json
+{
+  "model": "llama3.2",
+  "prompt": "Your question here",
+  "stream": false
+}
+```
+
+**Response**:
+```json
+{
+  "model": "llama3.2",
+  "created_at": "2024-01-01T00:00:00Z",
+  "response": "The AI's response text",
+  "done": true
+}
+```
+
+**Note**: Ollama also supports OpenAI-compatible `/v1/chat/completions` endpoint in v0.1.17+, but we use the native format for maximum compatibility with all versions.
 
 ## Troubleshooting
 
