@@ -68,7 +68,7 @@ jobs:
         with:
           name: windows-installer
           path: |
-            release/**/aethermsaid hub-*-x64-setup.exe
+            release/**/aether-hub-*-x64-setup.exe
           retention-days: 7
 
       - name: Upload artifacts (macOS)
@@ -77,8 +77,8 @@ jobs:
         with:
           name: macos-installer
           path: |
-            release/**/aethermsaid hub-*-x64.dmg
-            release/**/aethermsaid hub-*-arm64.dmg
+            release/**/aether-hub-*-x64.dmg
+            release/**/aether-hub-*-arm64.dmg
           retention-days: 7
 
       - name: Upload artifacts (Linux)
@@ -87,8 +87,8 @@ jobs:
         with:
           name: linux-installer
           path: |
-            release/**/aethermsaid hub-*.AppImage
-            release/**/aethermsaid hub-*.deb
+            release/**/aether-hub-*.AppImage
+            release/**/aether-hub-*.deb
           retention-days: 7
 
   release:
