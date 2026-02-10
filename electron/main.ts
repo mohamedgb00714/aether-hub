@@ -229,6 +229,7 @@ function createWindow() {
         "img-src 'self' data: https: blob:; " +
         "media-src 'self' data: blob:; " +
         "connect-src 'self' " +
+        "http://localhost:11434 " +
         "https://generativelanguage.googleapis.com " +
         "https://texttospeech.googleapis.com " +
         "https://speech.googleapis.com " +
@@ -3574,7 +3575,7 @@ ipcMain.handle('automation:reloadSchedules', async () => {
           llmConfig.llm.model = store.get('anthropic_model', 'claude-3-5-sonnet-20241022');
           break;
         case 'ollama':
-          llmConfig.llm.model = store.get('ollama_model', 'llama3.2');
+          llmConfig.llm.model = store.get('ollama_model', 'qwen2:0.5b');
           llmConfig.llm.base_url = store.get('ollama_url', 'http://localhost:11434');
           break;
         case 'local':
@@ -4418,7 +4419,7 @@ app.whenReady().then(async () => {
           llmConfig.llm.model = store.get('anthropic_model', 'claude-3-5-sonnet-20241022');
           break;
         case 'ollama':
-          llmConfig.llm.model = store.get('ollama_model', 'llama3.2');
+          llmConfig.llm.model = store.get('ollama_model', 'qwen2:0.5b');
           llmConfig.llm.base_url = store.get('ollama_url', 'http://localhost:11434');
           break;
         case 'local':

@@ -98,7 +98,7 @@ export const DEFAULT_MODEL = 'gemini-2.5-flash';
 export const DEFAULT_OPENROUTER_MODEL = 'anthropic/claude-3.5-sonnet';
 export const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
 export const DEFAULT_ANTHROPIC_MODEL = 'claude-3-5-sonnet-20241022';
-export const DEFAULT_OLLAMA_MODEL = 'llama3.2';
+export const DEFAULT_OLLAMA_MODEL = 'qwen2:0.5b';
 export const DEFAULT_OLLAMA_URL = 'http://localhost:11434';
 
 /**
@@ -337,7 +337,7 @@ async function getApiKey(): Promise<string> {
 /**
  * Get selected model based on current provider
  */
-async function getModel(): Promise<string> {
+export async function getModel(): Promise<string> {
   const provider = await getAIProvider();
   
   switch (provider) {
@@ -355,7 +355,27 @@ async function getModel(): Promise<string> {
     }
     case 'ollama': {
       const model = await storage.get(STORAGE_KEYS.OLLAMA_MODEL);
-      return (model && typeof model === 'string') ? model : DEFAULT_OLLAMA_MODEL;
+      if (model && typeof model === 'string') {
+        return model;
+      }
+      
+      // No model set - try to auto-detect from available models
+      try {
+        const availableModels = await fetchOllamaModels();
+        if (availableModels.length > 0) {
+          const firstModel = availableModels[0].id;
+          // Auto-detect and return the first available model, but do NOT
+          // overwrite the user's explicit selection in storage. The
+          // Settings UI is the single source of truth for persisting
+          // user choices.
+          console.log(`🔵 Auto-detected Ollama model: ${firstModel}`);
+          return firstModel;
+        }
+      } catch (error) {
+        console.warn('Failed to auto-detect Ollama model:', error);
+      }
+      
+      return DEFAULT_OLLAMA_MODEL;
     }
     case 'local': {
       const model = await storage.get(STORAGE_KEYS.LOCAL_AI_MODEL);
@@ -602,28 +622,31 @@ async function callAnthropic(prompt: string, systemInstruction?: string): Promis
 
 /**
  * Call Ollama (local AI)
- * Uses native Ollama API (/api/generate) for maximum compatibility
- * Note: /v1/chat/completions requires Ollama v0.1.17+ 
+ * Uses native Ollama Chat API (/api/chat) which supports tool calling.
  */
 async function callOllama(prompt: string, systemInstruction?: string): Promise<string> {
   const ollamaUrl = await storage.get(STORAGE_KEYS.OLLAMA_URL) || DEFAULT_OLLAMA_URL;
-  const model = await storage.get(STORAGE_KEYS.OLLAMA_MODEL) || DEFAULT_OLLAMA_MODEL;
+  const model = await getModel();
 
   const temporalContext = getTemporalContext();
   const finalSystemInstruction = systemInstruction 
     ? `${systemInstruction}\n\n[Temporal Context]\n${temporalContext}`
     : temporalContext;
 
+  const messages = [
+    { role: 'system', content: finalSystemInstruction },
+    { role: 'user', content: prompt }
+  ];
+
   try {
-    // Use native Ollama API for maximum compatibility across all versions
-    const response = await fetch(`${ollamaUrl}/api/generate`, {
+    const response = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model,
-        prompt: `${finalSystemInstruction}\n\n${prompt}`,
+        messages,
         stream: false,
       })
     });
@@ -635,7 +658,7 @@ async function callOllama(prompt: string, systemInstruction?: string): Promise<s
     }
 
     const data = await response.json();
-    return data.response || "Unable to generate response.";
+    return data.message?.content || data.response || "Unable to generate response.";
   } catch (error) {
     console.error("Ollama API error:", error);
     return "Error communicating with Ollama. Make sure Ollama is running on " + ollamaUrl;

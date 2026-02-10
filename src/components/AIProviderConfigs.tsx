@@ -221,6 +221,9 @@ export const OllamaConfigSection = () => {
       // Try to fetch models
       const models = await fetchOllamaModels();
       setAvailableModels(models);
+      if (!model && models.length > 0) {
+        setSelectedModel(models[0].id);
+      }
     };
     loadSettings();
   }, []);
@@ -245,13 +248,11 @@ export const OllamaConfigSection = () => {
 
   const handleSave = async () => {
     setIsSaving(true);
-    setTimeout(async () => {
-      await storage.set(STORAGE_KEYS.OLLAMA_URL, ollamaUrl);
-      await storage.set(STORAGE_KEYS.OLLAMA_MODEL, selectedModel);
-      setIsSaving(false);
-      setIsSuccess(true);
-      setTimeout(() => setIsSuccess(false), 2000);
-    }, 800);
+    await storage.set(STORAGE_KEYS.OLLAMA_URL, ollamaUrl);
+    await storage.set(STORAGE_KEYS.OLLAMA_MODEL, selectedModel);
+    setIsSaving(false);
+    setIsSuccess(true);
+    setTimeout(() => setIsSuccess(false), 2000);
   };
 
   return (
@@ -310,14 +311,14 @@ export const OllamaConfigSection = () => {
             type="text"
             value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value)}
-            placeholder="llama3.2"
+            placeholder="qwen2:0.5b"
             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
         )}
         <p className="text-xs text-slate-400 mt-1">
           {availableModels.length > 0 
             ? `Found ${availableModels.length} model(s)` 
-            : 'No models detected. Pull models with: ollama pull llama3.2'}
+            : 'No models detected. Pull models with: ollama pull qwen2:0.5b'}
         </p>
       </div>
 

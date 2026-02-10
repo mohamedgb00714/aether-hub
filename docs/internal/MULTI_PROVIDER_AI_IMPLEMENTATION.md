@@ -123,7 +123,7 @@ The LangChain chat agent supports all providers:
 curl -fsSL https://ollama.com/install.sh | sh
 
 # Pull a model
-ollama pull llama3.2
+ollama pull qwen2:0.5b
 
 # Start Ollama (if not running)
 ollama serve

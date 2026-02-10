@@ -46,7 +46,7 @@ aethermsaid hub supports **6 AI providers** for flexible, multi-model AI capabil
 
 ### 5. **Ollama** (Local, Privacy-First)
 - **Models**: Llama 3.2, Mistral, Gemma, and 100+ open-source models
-- **Default Model**: `llama3.2`
+- **Default Model**: `qwen2:0.5b`
 - **Default URL**: `http://localhost:11434`
 - **Features**:
   - **100% Local** - No data leaves your machine
@@ -54,7 +54,7 @@ aethermsaid hub supports **6 AI providers** for flexible, multi-model AI capabil
   - **Offline Capable** - Works without internet
 - **Requirements**:
   - Ollama installed locally ([Download](https://ollama.ai/))
-  - At least one model pulled (e.g., `ollama pull llama3.2`)
+  - At least one model pulled (e.g., `ollama pull qwen2:0.5b`)
 - **Storage Keys**:
   - `ollama_url` - Ollama server URL
   - `ollama_model` - Selected model
@@ -64,7 +64,7 @@ aethermsaid hub supports **6 AI providers** for flexible, multi-model AI capabil
   curl -fsSL https://ollama.ai/install.sh | sh
   
   # Pull a model
-  ollama pull llama3.2
+  ollama pull qwen2:0.5b
   
   # Verify running
   ollama list

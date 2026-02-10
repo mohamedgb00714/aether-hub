@@ -98,7 +98,7 @@ export function createMicOverlay() {
           "font-src 'self' https://fonts.gstatic.com; " +
           "img-src 'self' data: https: blob:; " +
           "media-src 'self' data: blob:; " +
-          "connect-src 'self' https://generativelanguage.googleapis.com https://texttospeech.googleapis.com https://speech.googleapis.com https://*.google.com https://oauth2.googleapis.com https://gmail.googleapis.com https://www.googleapis.com https://openrouter.ai https://api.github.com https://api.resend.com https://api.elevenlabs.io https://discord.com https://*.discord.com;"
+          "connect-src 'self' http://localhost:11434 https://generativelanguage.googleapis.com https://texttospeech.googleapis.com https://speech.googleapis.com https://*.google.com https://oauth2.googleapis.com https://gmail.googleapis.com https://www.googleapis.com https://openrouter.ai https://api.github.com https://api.resend.com https://api.elevenlabs.io https://discord.com https://*.discord.com;"
         ]
       }
     });

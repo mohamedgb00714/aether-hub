@@ -13,7 +13,7 @@ curl http://localhost:11434/api/tags
 {
   "models": [
     {
-      "name": "llama3.2:latest",
+      "name": "qwen2:0.5b:latest",
       "modified_at": "2024-01-01T00:00:00Z",
       "size": 2019393189
     }
@@ -27,7 +27,7 @@ This is the EXACT format aethermsaid hub uses:
 
 ```bash
 curl http://localhost:11434/api/generate -d '{
-  "model": "llama3.2",
+  "model": "qwen2:0.5b",
   "prompt": "Say hello in one sentence",
   "stream": false
 }'
@@ -36,7 +36,7 @@ curl http://localhost:11434/api/generate -d '{
 **Expected output:**
 ```json
 {
-  "model": "llama3.2",
+  "model": "qwen2:0.5b",
   "created_at": "2024-01-01T00:00:00.000000000Z",
   "response": "Hello! How can I assist you today?",
   "done": true,
@@ -50,7 +50,7 @@ Newer Ollama (v0.1.17+) also supports this, but we DON'T use it for compatibilit
 
 ```bash
 curl http://localhost:11434/v1/chat/completions -d '{
-  "model": "llama3.2",
+  "model": "qwen2:0.5b",
   "messages": [{"role": "user", "content": "Hi"}],
   "stream": false
 }'
@@ -75,7 +75,7 @@ ollama serve
 ollama list
 
 # Pull the model
-ollama pull llama3.2
+ollama pull qwen2:0.5b
 ```
 
 ### Test in Chrome/Browser
@@ -87,7 +87,7 @@ fetch('http://localhost:11434/api/generate', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    model: 'llama3.2',
+    model: 'qwen2:0.5b',
     prompt: 'Hello',
     stream: false
   })

@@ -95,7 +95,7 @@ export function createNotesOverlay() {
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
           "font-src 'self' https://fonts.gstatic.com; " +
           "img-src 'self' data: https: blob:; " +
-          "connect-src 'self' https://generativelanguage.googleapis.com https://*.google.com;"
+          "connect-src 'self' http://localhost:11434 https://generativelanguage.googleapis.com https://*.google.com;"
         ]
       }
     });

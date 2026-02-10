@@ -414,7 +414,7 @@ function processQueue() {
 /**
  * Schedule an automation with cron
  */
-export function scheduleAutomation(automation: DbAutomation, config: any) {
+export function scheduleAutomation(automation: DbAutomation, getLLMConfig: () => Promise<any>) {
   // Remove existing schedule if any
   unscheduleAutomation(automation.id);
 
@@ -432,7 +432,14 @@ export function scheduleAutomation(automation: DbAutomation, config: any) {
   // Create cron job
   const task = cron.schedule(automation.cron_schedule, async () => {
     console.log(`⏰ Cron triggered automation: ${automation.name} (${automation.id})`);
-    await executeAutomation(automation.id, config);
+    const config = await getLLMConfig();
+    const automationConfig = {
+      ...config,
+      task: automation.task,
+      chrome_profile_path: automation.profile_id,
+      headless: automation.headless === 1
+    };
+    await executeAutomation(automation.id, automationConfig);
   });
 
   activeCronJobs.set(automation.id, task);
@@ -460,15 +467,7 @@ export function loadAutomationSchedules(getLLMConfig: () => Promise<any>) {
 
   for (const automation of automations) {
     if (automation.cron_schedule) {
-      getLLMConfig().then(config => {
-        const automationConfig = {
-          ...config,
-          task: automation.task,
-          chrome_profile_path: automation.profile_id,
-          headless: automation.headless === 1
-        };
-        scheduleAutomation(automation, automationConfig);
-      });
+      scheduleAutomation(automation, getLLMConfig);
     }
   }
 

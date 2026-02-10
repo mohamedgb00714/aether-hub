@@ -19,6 +19,7 @@ import {
 import { browserAutomationService } from '../services/browserUseService';
 import storage, { STORAGE_KEYS } from '../services/electronStore';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import { getModel } from '../services/geminiService';
 
 interface ChromeProfile {
   id: string;
@@ -381,7 +382,7 @@ export default function AutomationsPage() {
         config.model = await storage.get(STORAGE_KEYS.ANTHROPIC_MODEL) || 'claude-3-5-sonnet-20241022';
         break;
       case 'ollama':
-        config.model = await storage.get(STORAGE_KEYS.OLLAMA_MODEL) || 'llama3.2';
+        config.model = await getModel(); // Auto-detects if not set
         config.base_url = await storage.get(STORAGE_KEYS.OLLAMA_URL) || 'http://localhost:11434';
         break;
       case 'local':

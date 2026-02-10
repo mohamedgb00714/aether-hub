@@ -73,7 +73,7 @@ curl http://localhost:11434/api/tags
 
 # 2. Test AI call (EXACT format used by app)
 curl http://localhost:11434/api/generate -d '{
-  "model": "llama3.2",
+  "model": "qwen2:0.5b",
   "prompt": "Say hello",
   "stream": false
 }'

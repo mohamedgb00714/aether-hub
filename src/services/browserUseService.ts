@@ -5,6 +5,7 @@
 
 import storage, { STORAGE_KEYS } from './electronStore';
 import { getChatResponse } from './langchainService';
+import { getModel } from './geminiService';
 
 interface ChromeProfile {
   id: string;
@@ -152,7 +153,7 @@ class BrowserAutomationService {
           model = await storage.get(STORAGE_KEYS.ANTHROPIC_MODEL) as string || 'claude-3-5-sonnet-20241022';
           break;
         case 'ollama':
-          model = await storage.get(STORAGE_KEYS.OLLAMA_MODEL) as string || 'llama3.2';
+          model = await getModel(); // Auto-detects if not set
           break;
         case 'local':
           apiKey = await storage.get(STORAGE_KEYS.LOCAL_AI_KEY) as string || '';

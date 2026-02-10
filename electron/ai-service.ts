@@ -62,9 +62,43 @@ export function getProvider(): AIProvider {
 }
 
 /**
+ * Auto-detect and get Ollama model
+ * If no model is set, fetches available models and uses the first one
+ */
+async function getOllamaModel(): Promise<string> {
+  const savedModel = store.get('ollama_model') as string;
+  if (savedModel) {
+    return savedModel;
+  }
+
+  // No model set - try to auto-detect from available models. Return the
+  // detected model but DO NOT persist it from the main process. The
+  // renderer Settings UI should be the single place that persists
+  // user-chosen values to avoid accidental overwrites.
+  try {
+    const ollamaUrl = store.get('ollama_url', 'http://localhost:11434') as string;
+    const response = await fetch(`${ollamaUrl}/api/tags`);
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.models && Array.isArray(data.models) && data.models.length > 0) {
+        const firstModel = data.models[0].name;
+        console.log(`🔵 Auto-detected Ollama model (not persisted): ${firstModel}`);
+        return firstModel;
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to auto-detect Ollama model:', error);
+  }
+
+  // Fallback to default
+  return 'qwen2:0.5b';
+}
+
+/**
  * Get API configuration for current provider
  */
-function getProviderConfig(provider: AIProvider) {
+async function getProviderConfig(provider: AIProvider) {
   const configs: Record<AIProvider, any> = {
     google: {
       apiKey: (store.get('gemini_api_key', '') as string) || process.env.GEMINI_API_KEY || '',
@@ -89,11 +123,11 @@ function getProviderConfig(provider: AIProvider) {
     },
     ollama: {
       apiKey: '', // Ollama doesn't need API key
-      model: store.get('ollama_model', 'llama3.2') as string,
+      model: await getOllamaModel(), // Auto-detects if not set
       endpoint: () => {
         const url = store.get('ollama_url', 'http://localhost:11434') as string;
-        // Use native Ollama API for maximum compatibility (works on all versions)
-        return `${url}/api/generate`;
+        // Use native Ollama chat API (tool-capable)
+        return `${url}/api/chat`;
       },
     },
     local: {
@@ -185,15 +219,17 @@ function getRequestBody(
     };
   }
 
-  // Ollama uses native format for maximum compatibility
+  // Ollama uses native chat format (tool-capable)
   if (provider === 'ollama') {
-    const fullPrompt = systemInstruction 
-      ? `${systemInstruction}\n\n${prompt}`
-      : prompt;
-    
+    const messages: Array<{role: string, content: string}> = [];
+    if (systemInstruction) {
+      messages.push({ role: 'system', content: systemInstruction });
+    }
+    messages.push({ role: 'user', content: prompt });
+
     return {
       model,
-      prompt: fullPrompt,
+      messages,
       stream: false,
       options: {
         temperature,
@@ -230,8 +266,8 @@ function parseResponse(provider: AIProvider, data: any): string {
       case 'anthropic':
         return data.content?.[0]?.text || '';
       case 'ollama':
-        // Ollama native API returns { response: "..." }
-        return data.response || '';
+        // Ollama chat API returns { message: { content: "..." } }
+        return data.message?.content || data.response || '';
       default:
         // OpenRouter, OpenAI, Local AI
         return data.choices?.[0]?.message?.content || '';
@@ -255,7 +291,7 @@ export async function callAI(
 ): Promise<AIResponse> {
   try {
     const selectedProvider = provider || getProvider();
-    const config = getProviderConfig(selectedProvider);
+    const config = await getProviderConfig(selectedProvider);
     
     // Validate API key (except for Ollama which doesn't need one)
     if (!config.apiKey && selectedProvider !== 'ollama') {

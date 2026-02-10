@@ -4,7 +4,7 @@ import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import storage, { STORAGE_KEYS } from './electronStore';
 import { db } from './database';
-import { getAIProvider, AIProvider } from './geminiService';
+import { getAIProvider, getModel, AIProvider } from './geminiService';
 
 // Initialize LangChain with selected provider
 type LangChainChat = ChatGoogleGenerativeAI | ChatOpenAI;
@@ -79,7 +79,7 @@ async function initializeChat() {
     
     case 'ollama': {
       const ollamaUrl = await storage.get(STORAGE_KEYS.OLLAMA_URL) || 'http://localhost:11434';
-      const model = await storage.get(STORAGE_KEYS.OLLAMA_MODEL) || 'llama3.2';
+      const model = await getModel(); // Auto-detects if not set
       
       chat = new ChatOpenAI({
         configuration: {

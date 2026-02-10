@@ -12,7 +12,7 @@
 
 2. **Pull a Model**:
    ```bash
-   ollama pull llama3.2
+   ollama pull qwen2:0.5b
    # or
    ollama pull mistral
    ```
@@ -48,7 +48,7 @@
 
 #### Common Issues:
 - **"Failed to connect"**: Make sure Ollama is running (`ollama serve`)
-- **"Found 0 models"**: Pull at least one model (`ollama pull llama3.2`)
+- **"Found 0 models"**: Pull at least one model (`ollama pull qwen2:0.5b`)
 - **Connection refused**: Check Ollama URL is correct (default: `http://localhost:11434`)
 
 ### 3. Test AI Calls with Ollama
@@ -67,7 +67,7 @@ After configuration, test Ollama in:
 
 3. **Browser Automation**:
    - Go to **Automations** page
-   - Should show "Using Ollama llama3.2" (or your selected model)
+   - Should show "Using Ollama qwen2:0.5b" (or your selected model)
    - Create and run a simple automation
 
 4. **Notifications/Calendar Summary**:
@@ -142,7 +142,7 @@ After configuration, test Ollama in:
 **Request** (native format - works on all Ollama versions):
 ```json
 {
-  "model": "llama3.2",
+  "model": "qwen2:0.5b",
   "prompt": "Your question here",
   "stream": false
 }
@@ -151,7 +151,7 @@ After configuration, test Ollama in:
 **Response**:
 ```json
 {
-  "model": "llama3.2",
+  "model": "qwen2:0.5b",
   "created_at": "2024-01-01T00:00:00Z",
   "response": "The AI's response text",
   "done": true
@@ -180,7 +180,7 @@ ollama serve
 ollama list
 
 # Pull a specific model
-ollama pull llama3.2
+ollama pull qwen2:0.5b
 
 # Remove a model
 ollama rm <model_name>
