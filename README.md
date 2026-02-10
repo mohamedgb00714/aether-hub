@@ -130,6 +130,11 @@ By enabling these features, you acknowledge and accept all associated risks. The
 | **Voice Control** | 🎤 Hands-free control with speech recognition and synthesis |
 | **...and much more!** | *Custom shortcuts, folder organization, cross-platform search, clipboard history, and 50+ additional features built-in* |
 
+## 📌 Release Notes (Latest)
+
+- Note: Local LLM providers (Ollama/Local AI) do not support tool calling yet.
+- Tip: For tool-enabled AI, use OpenRouter (recommended) or another supported cloud provider.
+
 ## 📸 Screenshots
 
 <div align="center">
