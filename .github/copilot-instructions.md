@@ -116,6 +116,56 @@ import Store from 'electron-store'; // Will fail - Node module in renderer!
 - Response format: `{ text: string }` - extract `.text` property from responses
 - Chat history stored in SQLite database (`chat_sessions`, `chat_messages` tables)
 
+### AI Agents System (`src/services/agents/`)
+**Architecture**: 11 specialized agents organized in 3 categories (Core Life, Productivity, Lifestyle)
+
+**Files**:
+- `types.ts`: Central type definitions (`AgentInfo`, `AgentMessage`, `AgentConversation`, `AgentResponse`, `AgentTool`)
+- `baseAgent.ts`: Shared base class with `run()` method, LangChain integration, conversation history
+- `registry.ts`: Singleton manager with `getAllAgents()`, `getAgentsByCategory()`, `searchAgents()`
+- `index.ts`: Clean module exports
+
+**Categories & Agents**:
+1. **Core Life** (`core-life/`):
+   - `financialPlanner.ts` 💰: Budget tracking, debt payoff, investment advice (tools: calculate_budget, calculate_debt_payoff, investment_allocation)
+   - `legalInfo.ts` ⚖️: Contract analysis, legal research, compliance (tools: analyze_contract, legal_database_search)
+   - `planner.ts` 📅: Calendar management, task prioritization (tools: get_todays_events, save_tasks, schedule_reminder)
+   - `study.ts` 📚: Quiz generation, flashcards, explanations (tools: generate_quiz, create_flashcard, explain_topic)
+
+2. **Productivity** (`productivity/`):
+   - `emailAssistant.ts` ✉️: Draft emails, filter spam (tools: draft_email, search_emails, filter_spam)
+   - `notesKnowledge.ts` 📝: Note organization, tagging (tools: search_notes, tag_note, get_all_tags)
+   - `freelancerAssistant.ts` 💼: Invoices, client tracking (tools: generate_invoice, track_client_hours)
+   - `codingTechnical.ts` 💻: Code review, debugging (tools: review_code, suggest_debugging_steps)
+
+3. **Lifestyle** (`lifestyle/`):
+   - `wellnessRoutine.ts` 🏥: Habit tracking, meal planning (tools: track_habit, generate_meal_plan)
+   - `shoppingDecision.ts` 🛒: Product comparisons, budgets (tools: compare_products, budget_recommendation)
+   - `travelPlanner.ts` 🧳: Trip itineraries, packing lists (tools: generate_itinerary, create_packing_list)
+
+**Key Patterns**:
+- All agents extend `BaseAgent` class
+- Use `DynamicStructuredTool` from LangChain with zod schemas for type safety
+- Storage keys for persistent data: `FINANCE_STORAGE_KEY`, `STUDY_STORAGE_KEY`, etc.
+- Tool naming: lowercase_with_underscores (e.g., `calculate_budget`, `generate_quiz`)
+- Response extraction: Always use `response.text` from LangChain return value
+- Shared chat instance: `getSharedChat()` reuses AI model across agents for efficiency
+
+**Creating New Agents**:
+1. Create file in category folder: `src/services/agents/{category}/{agentName}.ts`
+2. Extend `BaseAgent` class
+3. Define `AgentInfo` with name, description, category, icon, color, example prompts
+4. Implement custom tools with zod schemas
+5. Add to `registry.ts` imports and `ALL_AGENTS` array
+6. Export from category `index.ts`
+
+**UI Integration** (`src/pages/Agents.tsx`):
+- Category-based grid view with search
+- Individual chat interfaces per agent
+- Example prompts as clickable buttons
+- Tool usage tracking displayed in messages
+- Markdown rendering with ReactMarkdown
+
 ### Floating Chat Interface
 **FloatingChatBubble** (`src/components/FloatingChatBubble.tsx`):
 - Appears on all pages except `/chat` route
@@ -280,6 +330,34 @@ browser-addon/
 2. Add to `createDatabaseTools()` array
 3. Specify schema with zod for input validation
 4. Access database via `src/services/database.ts` wrapper
+
+### Adding AI Agent
+1. Create file in `src/services/agents/{category}/{agentName}.ts` (category: `core-life`, `productivity`, `lifestyle`)
+2. Import and extend `BaseAgent` from `../baseAgent`
+3. Define `AgentInfo` object with: `id`, `name`, `description`, `category`, `icon`, `color`, `systemPrompt`, `examplePrompts`
+4. Create custom tools using `DynamicStructuredTool` with zod schemas
+5. Specify storage key for persistent data: `const STORAGE_KEY = 'agent_your_agent_name';`
+6. Add agent class to `src/services/agents/registry.ts` imports and `ALL_AGENTS` array
+7. Export from category `index.ts` and main `src/services/agents/index.ts`
+
+**Agent Tool Pattern**:
+```typescript
+import { DynamicStructuredTool } from "@langchain/core/tools";
+import { z } from "zod";
+
+const customTool = new DynamicStructuredTool({
+  name: "tool_name_lowercase",
+  description: "Clear description for AI to understand when to use this",
+  schema: z.object({
+    param1: z.string().describe("Description of param1"),
+    param2: z.number().optional().describe("Optional param2")
+  }),
+  func: async ({ param1, param2 }) => {
+    // Implementation using storage, db, or other services
+    return JSON.stringify({ result: "success" });
+  }
+});
+```
 
 ### Accessing Native Features
 - File dialogs: `window.electronAPI.dialog.openFile()`

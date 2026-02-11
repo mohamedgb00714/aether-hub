@@ -97,6 +97,30 @@ export interface ElectronAPI {
   oauth: {
     openExternal: (url: string) => Promise<boolean>;
   };
+  copilot: {
+    createSession: (options: {
+      projectPath: string;
+      agentType: string;
+      tools: string[];
+      model?: string;
+      systemPrompt?: string;
+    }) => Promise<string>;
+    sendRequest: (sessionId: string, prompt: string, options?: {
+      projectPath: string;
+      agentType: string;
+      tools: string[];
+      model?: string;
+      systemPrompt?: string;
+    }) => Promise<any>;
+    stopSession: (sessionId: string) => Promise<void>;
+    listSessions: () => Promise<any[]>;
+    getAuthStatus: () => Promise<{ authenticated: boolean; state: string; error?: string; user?: any }>;
+    signIn: () => Promise<void>;
+    initiateOAuthFlow: () => Promise<{ success: boolean; url: string }>;
+    onAuthStatus: (callback: (data: { status: string, code?: string, message?: string }) => void) => () => void;
+    onUpdate: (callback: (data: { sessionId: string, chunk: string }) => void) => () => void;
+    onToolEvent: (callback: (data: { sessionId: string, type: string, data: any }) => void) => () => void;
+  };
   db: {
     cleanupLinkedIn: () => Promise<{ success: boolean; message: string; deleteCounts: any }>;
     accounts: {

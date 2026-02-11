@@ -695,6 +695,34 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeAllListeners('discord-selfbot:error');
       ipcRenderer.removeAllListeners('discord-selfbot:sync-complete');
     }
+  },
+
+  // GitHub Copilot SDK
+  copilot: {
+    createSession: (options: any) => ipcRenderer.invoke('copilot:createSession', options),
+    sendRequest: (sessionId: string, prompt: string, options?: any) => ipcRenderer.invoke('copilot:sendRequest', sessionId, prompt, options),
+    stopSession: (sessionId: string) => ipcRenderer.invoke('copilot:stopSession', sessionId),
+    listSessions: () => ipcRenderer.invoke('copilot:listSessions'),
+    getMessages: (sessionId: string) => ipcRenderer.invoke('copilot:getMessages', sessionId),
+    listModels: () => ipcRenderer.invoke('copilot:listModels'),
+    getAuthStatus: () => ipcRenderer.invoke('copilot:getAuthStatus'),
+    signIn: () => ipcRenderer.invoke('copilot:signIn'),
+    initiateOAuthFlow: () => ipcRenderer.invoke('copilot:initiateOAuthFlow'),
+    onAuthStatus: (callback: (data: { status: string, code?: string, message?: string }) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('copilot:auth-status', handler);
+      return () => ipcRenderer.removeListener('copilot:auth-status', handler);
+    },
+    onUpdate: (callback: (data: { sessionId: string, chunk: string }) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('copilot:update', handler);
+      return () => ipcRenderer.removeListener('copilot:update', handler);
+    },
+    onToolEvent: (callback: (data: { sessionId: string, type: string, data: any }) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('copilot:toolEvent', handler);
+      return () => ipcRenderer.removeListener('copilot:toolEvent', handler);
+    }
   }
 });
 
@@ -932,6 +960,20 @@ export interface ElectronAPI {
       getMessages: (chatId: string, limit?: number) => Promise<any[]>;
       getRecentMessages: (accountId: string, limit?: number) => Promise<any[]>;
     };
+  };
+  copilot: {
+    createSession: (options: any) => Promise<string>;
+    sendRequest: (sessionId: string, prompt: string) => Promise<any>;
+    stopSession: (sessionId: string) => Promise<void>;
+    listSessions: () => Promise<any[]>;
+    getMessages: (sessionId: string) => Promise<any[]>;
+    listModels: () => Promise<any[]>;
+    getAuthStatus: () => Promise<{ authenticated: boolean; state: string; error?: string; user?: any }>;
+    signIn: () => Promise<void>;
+    initiateOAuthFlow: () => Promise<{ success: boolean; url: string }>;
+    onAuthStatus: (callback: (data: { status: string, code?: string, message?: string }) => void) => () => void;
+    onUpdate: (callback: (data: { sessionId: string, chunk: string }) => void) => () => void;
+    onToolEvent: (callback: (data: { sessionId: string, type: string, data: any }) => void) => () => void;
   };
 }
 

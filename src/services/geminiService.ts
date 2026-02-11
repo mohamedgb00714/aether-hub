@@ -404,7 +404,7 @@ export async function callOpenRouter(prompt: string, systemInstruction?: string)
   }
   
   if (!apiKey) {
-    return "Please configure your OpenRouter API key in Settings > Intelligence Engine.";
+    throw new Error("Please configure your OpenRouter API key in Settings > Intelligence Engine.");
   }
 
   const temporalContext = getTemporalContext();
@@ -441,14 +441,14 @@ export async function callOpenRouter(prompt: string, systemInstruction?: string)
         return callOpenRouterWithModel(prompt, alternateModel, apiKey as string, systemInstruction);
       }
       
-      return `API Error: ${error.error?.message || 'Unknown error'}`;
+      throw new Error(`OpenRouter API Error: ${error.error?.message || 'Unknown error'}`);
     }
 
     const data = await response.json();
     return data.choices?.[0]?.message?.content || "Unable to generate response.";
   } catch (error) {
     console.error('OpenRouter call error:', error);
-    return "Error communicating with OpenRouter API.";
+    throw new Error(`OpenRouter API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -481,13 +481,13 @@ async function callOpenRouterWithModel(prompt: string, model: string, apiKey: st
 
     if (!response.ok) {
       const error = await response.json();
-      return `API Error: ${error.error?.message || 'Unknown error'}`;
+      throw new Error(`OpenRouter API Error: ${error.error?.message || 'Unknown error'}`);
     }
 
     const data = await response.json();
     return data.choices?.[0]?.message?.content || "Unable to generate response.";
   } catch (error) {
-    return "Error communicating with OpenRouter API.";
+    throw new Error(`OpenRouter API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -497,7 +497,7 @@ async function callOpenRouterWithModel(prompt: string, model: string, apiKey: st
 async function callGemini(prompt: string, systemInstruction?: string, options?: { tools?: any[] }): Promise<{ text: string; metadata?: any }> {
   const apiKey = await getApiKey();
   if (!apiKey) {
-    return { text: "Please configure your Gemini API key in Settings > Intelligence Engine." };
+    throw new Error("Please configure your Gemini API key in Settings > Intelligence Engine.");
   }
   
   const model = await getModel();
@@ -523,7 +523,7 @@ async function callGemini(prompt: string, systemInstruction?: string, options?: 
     };
   } catch (error) {
     console.error("Gemini API error:", error);
-    return { text: "Error communicating with Gemini API." };
+    throw new Error(`Gemini API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -535,7 +535,7 @@ async function callOpenAI(prompt: string, systemInstruction?: string): Promise<s
   const model = await storage.get(STORAGE_KEYS.OPENAI_MODEL) || DEFAULT_OPENAI_MODEL;
   
   if (!apiKey) {
-    return "Please configure your OpenAI API key in Settings > Intelligence Engine.";
+    throw new Error("Please configure your OpenAI API key in Settings > Intelligence Engine.");
   }
 
   const temporalContext = getTemporalContext();
@@ -562,14 +562,14 @@ async function callOpenAI(prompt: string, systemInstruction?: string): Promise<s
 
     if (!response.ok) {
       const error = await response.json();
-      return `OpenAI API Error: ${error.error?.message || 'Unknown error'}`;
+      throw new Error(`OpenAI API Error: ${error.error?.message || 'Unknown error'}`);
     }
 
     const data = await response.json();
     return data.choices?.[0]?.message?.content || "Unable to generate response.";
   } catch (error) {
     console.error("OpenAI API error:", error);
-    return "Error communicating with OpenAI API.";
+    throw new Error(`OpenAI API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -581,7 +581,7 @@ async function callAnthropic(prompt: string, systemInstruction?: string): Promis
   const model = await storage.get(STORAGE_KEYS.ANTHROPIC_MODEL) || DEFAULT_ANTHROPIC_MODEL;
   
   if (!apiKey) {
-    return "Please configure your Anthropic API key in Settings > Intelligence Engine.";
+    throw new Error("Please configure your Anthropic API key in Settings > Intelligence Engine.");
   }
 
   const temporalContext = getTemporalContext();
@@ -609,14 +609,14 @@ async function callAnthropic(prompt: string, systemInstruction?: string): Promis
 
     if (!response.ok) {
       const error = await response.json();
-      return `Anthropic API Error: ${error.error?.message || 'Unknown error'}`;
+      throw new Error(`Anthropic API Error: ${error.error?.message || 'Unknown error'}`);
     }
 
     const data = await response.json();
     return data.content?.[0]?.text || "Unable to generate response.";
   } catch (error) {
     console.error("Anthropic API error:", error);
-    return "Error communicating with Anthropic API.";
+    throw new Error(`Anthropic API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -654,14 +654,14 @@ async function callOllama(prompt: string, systemInstruction?: string): Promise<s
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Ollama API error:', errorText);
-      return "Error: Unable to connect to Ollama. Make sure Ollama is running and accessible at " + ollamaUrl;
+      throw new Error("Unable to connect to Ollama. Make sure Ollama is running and accessible at " + ollamaUrl);
     }
 
     const data = await response.json();
     return data.message?.content || data.response || "Unable to generate response.";
   } catch (error) {
     console.error("Ollama API error:", error);
-    return "Error communicating with Ollama. Make sure Ollama is running on " + ollamaUrl;
+    throw new Error("Error communicating with Ollama. Make sure Ollama is running on " + ollamaUrl);
   }
 }
 
@@ -674,7 +674,7 @@ async function callLocalAI(prompt: string, systemInstruction?: string): Promise<
   const model = await storage.get(STORAGE_KEYS.LOCAL_AI_MODEL) || 'default';
   
   if (!localUrl) {
-    return "Please configure your Local AI endpoint URL in Settings > Intelligence Engine.";
+    throw new Error("Please configure your Local AI endpoint URL in Settings > Intelligence Engine.");
   }
 
   const temporalContext = getTemporalContext();
@@ -706,14 +706,14 @@ async function callLocalAI(prompt: string, systemInstruction?: string): Promise<
 
     if (!response.ok) {
       const error = await response.json();
-      return `Local AI API Error: ${error.error?.message || 'Unknown error'}`;
+      throw new Error(`Local AI API Error: ${error.error?.message || 'Unknown error'}`);
     }
 
     const data = await response.json();
     return data.choices?.[0]?.message?.content || "Unable to generate response.";
   } catch (error) {
     console.error("Local AI API error:", error);
-    return "Error communicating with Local AI endpoint.";
+    throw new Error(`Local AI API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

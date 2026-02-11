@@ -157,6 +157,13 @@ export const STORAGE_KEYS = {
   GEMINI_MODEL: 'gemini_model',
   GOOGLE_SPEECH_API_KEY: 'google_speech_api_key',
   
+  // GitHub Copilot SDK
+  GITHUB_COPILOT_API_KEY: 'github_copilot_api_key',
+  GITHUB_COPILOT_PROJECT_PATH: 'github_copilot_project_path',
+  GITHUB_COPILOT_AGENT_TYPE: 'github_copilot_agent_type',
+  GITHUB_COPILOT_TOOLS: 'github_copilot_tools',
+  GITHUB_COPILOT_MODEL: 'github_copilot_model',
+  
   // OpenRouter API Keys
   OPENROUTER_API_KEY: 'openrouter_api_key',
   OPENROUTER_MODEL: 'openrouter_model',

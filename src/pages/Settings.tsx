@@ -5,20 +5,11 @@ import storage, { STORAGE_KEYS } from '../services/electronStore';
 import { db } from '../services/database';
 import { 
   GEMINI_MODELS, 
-  OPENROUTER_MODELS_FALLBACK, 
-  OPENAI_MODELS,
-  ANTHROPIC_MODELS,
   DEFAULT_MODEL, 
   DEFAULT_OPENROUTER_MODEL,
-  DEFAULT_OPENAI_MODEL,
-  DEFAULT_ANTHROPIC_MODEL,
-  DEFAULT_OLLAMA_MODEL,
-  DEFAULT_OLLAMA_URL,
   AIProvider, 
   getAIProvider, 
   fetchOpenRouterModels,
-  fetchOllamaModels,
-  testOllamaConnection,
   OpenRouterModel, 
   isFreeModeEnabled 
 } from '../services/geminiService';
@@ -28,6 +19,7 @@ import {
   AnthropicConfigSection,
   OllamaConfigSection,
   LocalAIConfigSection,
+  GithubCopilotConfigSection,
 } from '../components/AIProviderConfigs';
 import {
   getNotificationSettings,
@@ -46,7 +38,6 @@ import {
   SparklesIcon, 
   CpuChipIcon, 
   BellIcon, 
-  PaintBrushIcon, 
   BoltIcon, 
   ArrowLeftOnRectangleIcon,
   FingerPrintIcon,
@@ -57,7 +48,6 @@ import {
   CommandLineIcon,
   CloudIcon,
   CheckIcon,
-  LinkIcon,
   CheckCircleIcon,
   EyeIcon,
   EyeSlashIcon,
@@ -3334,6 +3324,7 @@ const SettingsPage: React.FC = () => {
             {[
               { id: 'profile', icon: UserCircleIcon, label: 'Profile' },
               { id: 'integrations', icon: KeyIcon, label: 'Integrations' },
+              { id: 'developer', icon: CommandLineIcon, label: 'Developer' },
               { id: 'intelligence', icon: SparklesIcon, label: 'AI Engine' },
               { id: 'voice', icon: MicrophoneIcon, label: 'Voice Input' },
               { id: 'notifications', icon: BellIcon, label: 'Notifications' },
@@ -3396,6 +3387,34 @@ const SettingsPage: React.FC = () => {
                 </div>
               </SettingSection>
             </div>
+          )}
+
+          {activeTab === 'developer' && (
+            <SettingSection title="Developer Workbench" icon={CommandLineIcon}>
+              <div className="mb-6 bg-slate-900 p-6 rounded-3xl border border-slate-800 flex items-start gap-4 text-white">
+                <CommandLineIcon className="w-6 h-6 text-indigo-400 shrink-0" />
+                <div>
+                  <h4 className="font-bold text-indigo-400 mb-1">Agent Settings</h4>
+                  <p className="text-sm text-slate-300 leading-relaxed font-medium">
+                    Configure settings for the AI Developer features. These settings are specific to the coding agent and developer tools.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-slate-900 text-base mb-4">GitHub Copilot SDK</h3>
+                <GithubCopilotConfigSection />
+              </div>
+              
+              <div className="h-[1px] bg-slate-50 my-8"></div>
+              
+              <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl flex items-start gap-3">
+                <ExclamationCircleIcon className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-900/70 leading-relaxed font-medium">
+                  <strong className="font-bold">Experimental:</strong> The AI Developer workbench is currently in preview. some tools may require additional system dependencies (e.g., git, node, etc.) to be globally available in your environment.
+                </div>
+              </div>
+            </SettingSection>
           )}
 
           {activeTab === 'intelligence' && (

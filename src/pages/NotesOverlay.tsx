@@ -89,7 +89,7 @@ const NotesOverlayPage: React.FC = () => {
     }
 
     return () => observer.disconnect();
-  }, [isCollapsed, isExpanded, isEditing, currentNoteIndex, totalNotes]);
+  }, [isCollapsed, isExpanded, isEditing, currentNoteIndex, pinnedNotes.length, notes.length]);
 
   const loadNotes = async () => {
     try {

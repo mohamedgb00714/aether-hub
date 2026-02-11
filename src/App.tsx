@@ -23,6 +23,8 @@ import MicOverlayPage from './pages/MicOverlay';
 import NotesOverlayPage from './pages/NotesOverlay';
 import YouTubePage from './pages/YouTube';
 import AutomationsPage from './pages/Automations';
+import AIDeveloperPage from './pages/AIDeveloper';
+import AgentsPage from './pages/Agents';
 import TitleBar from './components/TitleBar';
 import ErrorBoundary from './components/ErrorBoundary';
 import FloatingChatBubble from './components/FloatingChatBubble';
@@ -230,13 +232,13 @@ const MenuGroup = ({
     <div className="mb-4">
       <button
         onClick={toggleExpand}
-        className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 hover:text-slate-600 transition-colors group"
+        className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-black uppercase tracking-[0.15em] text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition-all group"
       >
         <div className="flex items-center space-x-2">
-          <Icon className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500" />
+          <Icon className="w-3.5 h-3.5 text-indigo-500 group-hover:text-purple-600" />
           <span>{title}</span>
         </div>
-        <ChevronDownIcon className={`w-3.5 h-3.5 transition-transform duration-300 ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
+        <ChevronDownIcon className={`w-3.5 h-3.5 text-indigo-500 group-hover:text-purple-600 transition-transform duration-300 ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
       </button>
       <div 
         className={`space-y-1 mt-2 transition-all duration-300 origin-top ${
@@ -431,14 +433,14 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           </div>
 
         <nav className="flex-1 px-6 py-2 overflow-y-auto">
-          <MenuGroup title="Overview" icon={ChartBarIcon} defaultExpanded={true}>
+          <MenuGroup title="Overview" icon={ChartBarIcon} defaultExpanded={false}>
             <SidebarLink to="/" icon={HomeIcon} label="Dashboard" />
             <SidebarLink to="/actions" icon={BoltIcon} label="Actions" badge="AI" badgeColor="bg-purple-500" />
             <SidebarLink to="/digest" icon={SparklesIcon} label="Intelligent Briefing" />
             <SidebarLink to="/intelligence" icon={BoltIcon} label="Intelligence Feed" badge="AI" badgeColor="bg-purple-500" />
           </MenuGroup>
 
-          <MenuGroup title="Communications" icon={ChatBubbleBottomCenterTextIcon} defaultExpanded={true}>
+          <MenuGroup title="Communications" icon={ChatBubbleBottomCenterTextIcon} defaultExpanded={false}>
             <SidebarLink to="/emails" icon={EnvelopeIcon} label="Emails" />
             <SidebarLink to="/whatsapp" icon={ChatBubbleLeftRightIcon} label="WhatsApp" badge="NEW" badgeColor="bg-green-500" />
             <SidebarLink to="/telegram" icon={PaperAirplaneIcon} label="Telegram" badge="NEW" badgeColor="bg-blue-500" />
@@ -446,22 +448,27 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             <SidebarLink to="/resend" icon={PaperAirplaneIcon} label="Campaigns" />
           </MenuGroup>
 
-          <MenuGroup title="Productivity" icon={BriefcaseIcon} defaultExpanded={true}>
+          <MenuGroup title="Productivity" icon={BriefcaseIcon} defaultExpanded={false}>
             <SidebarLink to="/calendar" icon={CalendarDaysIcon} label="Calendar" />
             <SidebarLink to="/github" icon={CodeBracketIcon} label="GitHub" />
             <SidebarLink to="/notes" icon={PencilSquareIcon} label="Keep Notes" badge="NEW" badgeColor="bg-blue-500" />
             <SidebarLink to="/watch" icon={EyeIcon} label="Watch List" badge="NEW" badgeColor="bg-amber-500" />
-            <SidebarLink to="/automations" icon={PlayCircleIcon} label="Automations" badge="NEW" badgeColor="bg-violet-500" />
           </MenuGroup>
 
-          <MenuGroup title="AI & Knowledge" icon={LightBulbIcon} defaultExpanded={true}>
+          <MenuGroup title="AI Agents" icon={SparklesIcon} defaultExpanded={false}>
+            <SidebarLink to="/agents" icon={SparklesIcon} label="All Agents" badge="NEW" badgeColor="bg-purple-500" />
             <SidebarLink to="/chat" icon={ChatBubbleLeftRightIcon} label="Assistant" />
+            <SidebarLink to="/automations" icon={PlayCircleIcon} label="Automations" badge="AI" badgeColor="bg-violet-500" />
+            <SidebarLink to="/ai-developer" icon={CommandLineIcon} label="AI Developer" badge="AI" badgeColor="bg-indigo-500" />
+            <SidebarLink to="/youtube" icon={PlayCircleIcon} label="YouTube" badge="AI" badgeColor="bg-red-500" />
+          </MenuGroup>
+
+          <MenuGroup title="Knowledge" icon={LightBulbIcon} defaultExpanded={false}>
             <SidebarLink to="/knowledge" icon={CircleStackIcon} label="Knowledge Base" />
             <SidebarLink to="/insights" icon={SparklesIcon} label="Insights" badge="NEW" badgeColor="bg-purple-500" />
-            <SidebarLink to="/youtube" icon={PlayCircleIcon} label="YouTube" badge="NEW" badgeColor="bg-red-500" />
           </MenuGroup>
 
-          <MenuGroup title="System" icon={WrenchScrewdriverIcon} defaultExpanded={true}>
+          <MenuGroup title="System" icon={WrenchScrewdriverIcon} defaultExpanded={false}>
             <SidebarLink to="/accounts" icon={LinkIcon} label="Connections" />
           </MenuGroup>
         </nav>
@@ -647,7 +654,9 @@ const App: React.FC = () => {
                   <Route path="/youtube" element={<YouTubePage />} />
                   <Route path="/watch" element={<WatchPage />} />
                   <Route path="/actions" element={<ActionsPage />} />
+                  <Route path="/agents" element={<AgentsPage />} />
                   <Route path="/automations" element={<AutomationsPage />} />
+                  <Route path="/ai-developer" element={<AIDeveloperPage />} />
                   <Route path="/accounts" element={<AccountsPage />} />
                   <Route path="/digest" element={<DigestPage />} />
                   <Route path="/chat" element={<ChatAssistant />} />

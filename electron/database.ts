@@ -104,6 +104,7 @@ export interface DbChatSession {
   id: string;
   title: string;
   account_ids: string | null; // JSON string array
+  metadata: string | null; // JSON string for arbitrary metadata
   created_at: string;
   updated_at: string;
 }
@@ -594,10 +595,18 @@ class DatabaseManager {
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         account_ids TEXT,
+        metadata TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Add metadata column if it doesn't exist (for existing databases)
+    try {
+      this.db.prepare('ALTER TABLE chat_sessions ADD COLUMN metadata TEXT').run();
+    } catch (e) {
+      // Column already exists or table doesn't exist yet
+    }
 
     // Chat messages table
     this.db.exec(`
@@ -1529,13 +1538,18 @@ class DatabaseManager {
       return this.db.prepare('SELECT * FROM chat_sessions WHERE id = ?').get(id) as DbChatSession | undefined;
     },
 
-    create: (session: { id: string; title: string; accountIds?: string[] }): boolean => {
+    create: (session: { id: string; title: string; accountIds?: string[]; metadata?: any }): boolean => {
       if (!this.db) throw new Error('Database not initialized');
       try {
         this.db.prepare(`
-          INSERT INTO chat_sessions (id, title, account_ids, created_at, updated_at)
-          VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        `).run(session.id, session.title, session.accountIds ? JSON.stringify(session.accountIds) : null);
+          INSERT INTO chat_sessions (id, title, account_ids, metadata, created_at, updated_at)
+          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `).run(
+          session.id, 
+          session.title, 
+          session.accountIds ? JSON.stringify(session.accountIds) : null,
+          session.metadata ? JSON.stringify(session.metadata) : null
+        );
         return true;
       } catch (err) {
         console.error('Failed to create chat session:', err);
@@ -1543,7 +1557,7 @@ class DatabaseManager {
       }
     },
 
-    update: (id: string, updates: { title?: string; accountIds?: string[] }): boolean => {
+    update: (id: string, updates: { title?: string; accountIds?: string[]; metadata?: any }): boolean => {
       if (!this.db) throw new Error('Database not initialized');
       try {
         const sets: string[] = [];
@@ -1556,6 +1570,10 @@ class DatabaseManager {
         if (updates.accountIds !== undefined) {
           sets.push('account_ids = ?');
           values.push(JSON.stringify(updates.accountIds));
+        }
+        if (updates.metadata !== undefined) {
+          sets.push('metadata = ?');
+          values.push(JSON.stringify(updates.metadata));
         }
         
         sets.push('updated_at = CURRENT_TIMESTAMP');

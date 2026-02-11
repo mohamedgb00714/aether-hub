@@ -264,7 +264,22 @@ Focus on:
 
   try {
     const response = await callAI(prompt);
-    const aiResult = JSON.parse(response.replace(/```json\n?|```/g, '').trim());
+    
+    // Clean the response and validate it's JSON
+    const cleanedResponse = response.replace(/```json\n?|```/g, '').trim();
+    
+    // Check if response looks like an error message
+    if (cleanedResponse.startsWith('Please') || cleanedResponse.startsWith('Error') || cleanedResponse.startsWith('Failed')) {
+      throw new Error(`AI provider error: ${cleanedResponse.substring(0, 100)}...`);
+    }
+    
+    let aiResult;
+    try {
+      aiResult = JSON.parse(cleanedResponse);
+    } catch (parseError) {
+      console.error('❌ Failed to parse AI response as JSON. Response:', cleanedResponse.substring(0, 200));
+      throw new Error('AI returned invalid JSON. Please check your AI provider configuration in Settings > Intelligence Engine.');
+    }
 
     const feed: IntelligenceFeed = {
       id: uuidv4(),

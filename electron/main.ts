@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, Tray, globalShortcut, dialog, shell, screen, nativeImage, Notification, safeStorage } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, Tray, globalShortcut, dialog, shell, screen, nativeImage, Notification } from 'electron';
 import * as dotenv from 'dotenv';
 // Load environment variables from .env file
 dotenv.config();
@@ -33,6 +33,7 @@ import * as micOverlay from './mic-overlay.js';
 import * as notesOverlay from './notes-overlay.js';
 import * as youtube from './youtube.js';
 import * as automationScheduler from './automation-scheduler.js';
+import { copilotService } from './copilot-service.js';
 import { getEncryptionKey } from './security.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -293,6 +294,11 @@ function createWindow() {
   createMenu();
   createTray();
   setupGlobalShortcuts();
+
+  // Forward copilot tool execution events to renderer
+  copilotService.setEventCallback((event) => {
+    mainWindow?.webContents.send('copilot:toolEvent', event);
+  });
   
   // Initialize Mic Overlay
   micOverlay.setupOverlayIPC();
@@ -626,6 +632,157 @@ ipcMain.handle('store:clear', () => {
 ipcMain.handle('dialog:openFile', async (_event, options) => {
   const result = await dialog.showOpenDialog(mainWindow!, options);
   return result.filePaths;
+});
+
+ipcMain.handle('copilot:createSession', async (_event, options) => {
+  const sessionId = await copilotService.createSession(options);
+  // Persist session to DB
+  const projectName = options.projectPath ? options.projectPath.split('/').pop() : 'Project';
+  database.chatSessions.create({
+    id: sessionId,
+    title: `Dev: ${projectName}`,
+    metadata: {
+      projectPath: options.projectPath,
+      agentType: options.agentType,
+      tools: options.tools,
+      model: options.model,
+      systemPrompt: options.systemPrompt
+    }
+  });
+  return sessionId;
+});
+
+ipcMain.handle('copilot:sendRequest', async (_event, sessionId, prompt, options?: any) => {
+  // Check if session is active in the service (e.g. after restart)
+  if (!copilotService.isSessionActive(sessionId)) {
+    console.log(`🤖 MAIN: Session ${sessionId} not active, attempting restoration...`);
+    
+    // 1. Try to get metadata from DB
+    const dbSession = database.chatSessions.getById(sessionId);
+    let metadata: any = null;
+    
+    try {
+      if (dbSession?.metadata) {
+        metadata = JSON.parse(dbSession.metadata);
+      }
+    } catch (e) {
+      console.error('Failed to parse metadata from DB:', e);
+    }
+
+    // 2. Use options from renderer as fallback if DB metadata is missing
+    if (!metadata && options) {
+      console.log(`🤖 MAIN: No metadata in DB for ${sessionId}, using fallback options from renderer`);
+      metadata = options;
+      // Save this metadata for future use
+      database.chatSessions.update(sessionId, { metadata });
+    }
+
+    if (metadata && metadata.projectPath) {
+      try {
+        // Load chat history from DB to provide context
+        const dbMessages = database.chatMessages.getBySession(sessionId) || [];
+        const chatHistory = dbMessages.map((msg: any) => ({
+          role: msg.role,
+          content: msg.content,
+        }));
+
+        // Use resumeSession instead of createSession — preserves server-side history
+        // Falls back to createSession + history injection if server session expired
+        await copilotService.resumeSession({
+          sessionId: sessionId,
+          projectPath: metadata.projectPath,
+          agentType: metadata.agentType || 'standard',
+          tools: metadata.tools || [],
+          model: metadata.model || 'gpt-4o',
+          systemPrompt: metadata.systemPrompt,
+          chatHistory: chatHistory,
+        });
+        console.log(`🤖 MAIN: Session ${sessionId} restored successfully`);
+      } catch (err) {
+        console.error(`🤖 MAIN: Failed to restore session ${sessionId}:`, err);
+      }
+    } else {
+      console.warn(`🤖 MAIN: Could not find restoration context (metadata/options) for session ${sessionId}`);
+    }
+  }
+
+  // Save user message
+  const userMsgId = Date.now().toString();
+  database.chatMessages.create({
+    id: userMsgId,
+    sessionId: sessionId,
+    role: 'user',
+    content: prompt
+  });
+
+  const response = await copilotService.sendRequest(sessionId, prompt, (chunk) => {
+    mainWindow?.webContents.send('copilot:update', { sessionId, chunk });
+  });
+
+  // Save assistant response
+  const assistantMsgId = (Date.now() + 1).toString();
+  database.chatMessages.create({
+    id: assistantMsgId,
+    sessionId: sessionId,
+    role: 'assistant',
+    content: response
+  });
+
+  return response;
+});
+
+ipcMain.handle('copilot:stopSession', async (_event, sessionId) => {
+  return await copilotService.stopSession(sessionId);
+});
+
+ipcMain.handle('copilot:listSessions', async () => {
+  const sessions = database.chatSessions.getAll();
+  // Map DB sessions to expected AIDeveloper format
+  return sessions.map(s => {
+    let metadata: any = {};
+    try {
+      if (s.metadata) {
+        const parsed = JSON.parse(s.metadata);
+        if (parsed && typeof parsed === 'object') {
+          metadata = parsed;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse session metadata:', e);
+    }
+    
+    return {
+      id: s.id,
+      title: s.title,
+      projectPath: metadata.projectPath || '',
+      agentType: metadata.agentType || 'standard',
+      tools: metadata.tools || [],
+      model: metadata.model || 'gpt-4o',
+      status: 'idle'
+    };
+  });
+});
+
+ipcMain.handle('copilot:getMessages', async (_event, sessionId) => {
+  return database.chatMessages.getBySession(sessionId);
+});
+
+ipcMain.handle('copilot:getAuthStatus', async () => {
+  return copilotService.getAuthStatus();
+});
+
+ipcMain.handle('copilot:signIn', async () => {
+  return await copilotService.signIn((data) => {
+    mainWindow?.webContents.send('copilot:auth-status', data);
+  });
+});
+
+ipcMain.handle('copilot:initiateOAuthFlow', async () => {
+  return await copilotService.initiateOAuthFlow();
+});
+
+ipcMain.handle('copilot:listModels', async () => {
+  return await copilotService.listModels();
 });
 
 ipcMain.handle('dialog:saveFile', async (_event, options) => {

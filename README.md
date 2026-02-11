@@ -120,6 +120,7 @@ By enabling these features, you acknowledge and accept all associated risks. The
 | **AI Intelligence Engine** | Gemini, OpenAI, Anthropic, OpenRouter, Ollama, Local AI |
 | **AI Digest** | Cross-referenced daily summary of all accounts |
 | **LangChain Agent** | 26+ database tools for deep conversational AI |
+| **AI Agents (NEW)** | 11 specialized agents: Financial, Legal, Study, Wellness, Travel, etc. |
 | **Knowledge Base** | Save, organize, and get AI insights from your content |
 | **Automations** | Scheduled browser automation with browser-use |
 | **Watch System** | Cross-platform monitoring with AI action generation |
@@ -134,6 +135,29 @@ By enabling these features, you acknowledge and accept all associated risks. The
 
 - Note: Local LLM providers (Ollama/Local AI) do not support tool calling yet.
 - Tip: For tool-enabled AI, use OpenRouter (recommended) or another supported cloud provider.
+
+## 🎯 AI Agents
+
+aether hub includes **11 specialized AI agents** organized in 3 categories:
+
+### Core Life Agents 🌟
+- **💰 Financial Planner** — Budget tracking, debt payoff, investment advice
+- **⚖️ Legal Info** — Contract analysis, legal research, compliance checks
+- **📅 Planner** — Calendar management, task prioritization, reminder scheduling
+- **📚 Study** — Quiz generation, flashcards, topic explanations
+
+### Productivity Agents 💼
+- **✉️ Email Assistant** — Draft emails, filter spam, summarize threads
+- **📝 Notes & Knowledge** — Organize notes, tag documents, search knowledge base
+- **💼 Freelancer** — Invoice templates, client tracking, project time estimates
+- **💻 Coding & Technical** — Code review, debugging help, documentation generation
+
+### Lifestyle Agents 🎨
+- **🏥 Wellness & Routine** — Habit tracking, meal planning, exercise suggestions
+- **🛒 Shopping & Decision** — Product comparisons, budget-conscious recommendations
+- **🧳 Travel Planner** — Trip itineraries, packing lists, budget estimations
+
+Each agent has **custom tools**, **example prompts**, and **persistent storage** for personalized recommendations.
 
 ## 📸 Screenshots
 
