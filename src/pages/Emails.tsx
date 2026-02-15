@@ -176,6 +176,7 @@ const EmailsPage: React.FC = () => {
     const allEmails = await db.emails.getAll();
     
     // Transform to component format
+    const validTagIds = EMAIL_TAGS.map(t => t.id) as string[];
     const transformedEmails: Email[] = allEmails.map(e => ({
       id: e.id,
       from: e.sender,
@@ -189,7 +190,7 @@ const EmailsPage: React.FC = () => {
       suggestedReply: e.aiSuggestedReply,
       accountId: e.accountId,
       platform: emailAccounts.find(a => a.id === e.accountId)?.platform,
-      tags: e.tags as EmailTag[]
+      tags: (e.tags || []).filter((t: string) => validTagIds.includes(t))
     }));
     
     setEmails(transformedEmails);
@@ -222,12 +223,16 @@ const EmailsPage: React.FC = () => {
         const prompt = `Quickly analyze this email. Return JSON only:
 {"summary": "1-2 sentence summary", "importance": "high|medium|low", "tags": ["tag1", "tag2"]}
 
+IMPORTANT: "tags" MUST only contain values from this exact list: ["work", "personal", "important", "newsletter", "social", "promotions", "updates", "finance", "travel"]. Pick 1-3 that best match. Do NOT invent new tags.
+
 From: ${email.from}
 Subject: ${email.subject}
 Content: ${email.snippet || '(No content)'}`;
 
         const response = await callAI(prompt);
         const analysis = JSON.parse(response.replace(/```json\n?|```/g, '').trim());
+        const validTagIds = EMAIL_TAGS.map(t => t.id);
+        const validatedTags = (analysis.tags || []).filter((t: string) => validTagIds.includes(t as EmailTag));
         
         const idx = updatedEmails.findIndex(e => e.id === email.id);
         if (idx !== -1) {
@@ -235,14 +240,14 @@ Content: ${email.snippet || '(No content)'}`;
             ...updatedEmails[idx],
             aiSummary: analysis.summary,
             importance: analysis.importance,
-            tags: analysis.tags || []
+            tags: validatedTags
           };
           
           // Save to database
           await db.emails.update(email.id, {
             aiSummary: analysis.summary,
             aiPriority: analysis.importance === 'high' ? 3 : analysis.importance === 'medium' ? 2 : 1,
-            tags: analysis.tags || []
+            tags: validatedTags
           });
         }
       } catch (err) {
@@ -268,7 +273,7 @@ Content: ${email.snippet || '(No content)'}`;
 2. Importance level (high/medium/low) and why
 3. Key action items if any
 4. Suggested response tone
-5. Descriptive tags (2-4 tags)
+5. Tags from this EXACT list only: ["work", "personal", "important", "newsletter", "social", "promotions", "updates", "finance", "travel"]. Pick 1-3 that best match. Do NOT invent new tags.
 
 From: ${email.from}
 Subject: ${email.subject}
@@ -287,11 +292,13 @@ Respond in JSON format:
       const response = await callAI(prompt);
       try {
         const analysis = JSON.parse(response.replace(/```json\n?|```/g, '').trim());
+        const validTagIds = EMAIL_TAGS.map(t => t.id);
+        const validatedTags = (analysis.tags || []).filter((t: string) => validTagIds.includes(t as EmailTag));
         const updatedEmail = {
           ...email,
           aiSummary: analysis.summary,
           importance: analysis.importance,
-          tags: analysis.tags || []
+          tags: validatedTags
         };
         setSelectedEmail(updatedEmail);
         setEmails(prev => prev.map(e => e.id === email.id ? updatedEmail : e));
@@ -300,7 +307,7 @@ Respond in JSON format:
         await db.emails.update(email.id, {
           aiSummary: analysis.summary,
           aiPriority: analysis.importance === 'high' ? 3 : analysis.importance === 'medium' ? 2 : 1,
-          tags: analysis.tags || []
+          tags: validatedTags
         });
         
         showToast('Email analyzed successfully!');
@@ -360,7 +367,9 @@ Write ONLY the reply body text, no subject line or greeting signature. The reply
         snippet: e.snippet?.substring(0, 200)
       }));
 
-      const prompt = `Analyze these emails and categorize by importance and add descriptive tags. Return JSON array:
+      const prompt = `Analyze these emails and categorize by importance and add tags. Tags MUST only be from this exact list: ["work", "personal", "important", "newsletter", "social", "promotions", "updates", "finance", "travel"]. Pick 1-3 per email. Do NOT invent new tags.
+
+Emails:
 ${JSON.stringify(emailSummaries)}
 
 Return format:
@@ -369,18 +378,20 @@ Return format:
       const response = await callAI(prompt);
       try {
         const analyses = JSON.parse(response.replace(/```json\n?|```/g, '').trim());
+        const validTagIds = EMAIL_TAGS.map(t => t.id);
         setEmails(prev => prev.map(email => {
           const analysis = analyses.find((a: any) => a.id === email.id);
           if (analysis) {
+            const validatedTags = (analysis.tags || []).filter((t: string) => validTagIds.includes(t as EmailTag));
             // Update database too
             db.emails.update(email.id, {
               aiPriority: analysis.importance === 'high' ? 3 : analysis.importance === 'medium' ? 2 : 1,
-              tags: analysis.tags || []
+              tags: validatedTags
             });
             return { 
               ...email, 
               importance: analysis.importance,
-              tags: analysis.tags || []
+              tags: validatedTags
             };
           }
           return email;
@@ -706,6 +717,7 @@ Return format:
             </button>
             {EMAIL_TAGS.map(tag => {
               const count = emails.filter(e => e.tags?.includes(tag.id)).length;
+              if (count === 0 && selectedTagFilter !== tag.id) return null;
               return (
                 <button
                   key={tag.id}

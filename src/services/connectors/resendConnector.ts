@@ -95,7 +95,7 @@ export async function getResendAccounts(): Promise<{ id: string; name: string; e
   
   const result = [];
   for (const account of resendAccounts) {
-    const keys = await storage.get(`nexus_keys_resend_${account.id}`) as { apiKey?: string } | null;
+    const keys = await storage.get(`aether-hub_keys_resend_${account.id}`) as { apiKey?: string } | null;
     if (keys?.apiKey) {
       result.push({
         id: account.id,
@@ -114,7 +114,7 @@ export async function getResendAccounts(): Promise<{ id: string; name: string; e
 export async function getResendApiKey(accountId?: string): Promise<string | null> {
   // If specific account requested
   if (accountId) {
-    const keys = await storage.get(`nexus_keys_resend_${accountId}`) as { apiKey?: string } | null;
+    const keys = await storage.get(`aether-hub_keys_resend_${accountId}`) as { apiKey?: string } | null;
     return keys?.apiKey || null;
   }
   
@@ -136,14 +136,14 @@ export async function getResendApiKey(accountId?: string): Promise<string | null
  * Save Resend API key for an account
  */
 export async function saveResendApiKey(accountId: string, apiKey: string): Promise<void> {
-  await storage.set(`nexus_keys_resend_${accountId}`, { apiKey });
+  await storage.set(`aether-hub_keys_resend_${accountId}`, { apiKey });
 }
 
 /**
  * Remove Resend API key for an account
  */
 export async function removeResendApiKey(accountId: string): Promise<void> {
-  await storage.remove(`nexus_keys_resend_${accountId}`);
+  await storage.remove(`aether-hub_keys_resend_${accountId}`);
 }
 
 /**

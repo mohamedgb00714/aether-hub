@@ -393,23 +393,26 @@ function dbToKnowledgeInsight(db: any): KnowledgeInsight {
 
 // Transform functions: App -> Database
 function accountToDb(account: Partial<Account> & { id: string }): Partial<DbAccount> & { id: string } {
-  return {
-    id: account.id,
-    name: account.name,
-    email: account.email,
-    platform: account.platform,
-    category: account.category,
-    access_token: account.accessToken || null,
-    refresh_token: account.refreshToken || null,
-    token_expires_at: account.tokenExpiresAt || null,
-    is_connected: account.isConnected ? 1 : 0,
-    status: account.status || null,
-    last_sync: account.lastSync || null,
-    avatar_url: account.avatarUrl || null,
-    color: account.color || null,
-    folder_id: account.folderId || null,
-    ignored: account.ignored ? 1 : 0,
-  };
+  // Only include fields that are explicitly provided to prevent
+  // overwriting tokens/connection status with null/0 on partial updates
+  const result: Partial<DbAccount> & { id: string } = { id: account.id };
+
+  if (account.name !== undefined) result.name = account.name;
+  if (account.email !== undefined) result.email = account.email;
+  if (account.platform !== undefined) result.platform = account.platform;
+  if (account.category !== undefined) result.category = account.category;
+  if (account.accessToken !== undefined) result.access_token = account.accessToken || null;
+  if (account.refreshToken !== undefined) result.refresh_token = account.refreshToken || null;
+  if (account.tokenExpiresAt !== undefined) result.token_expires_at = account.tokenExpiresAt || null;
+  if (account.isConnected !== undefined) result.is_connected = account.isConnected ? 1 : 0;
+  if (account.status !== undefined) result.status = account.status || null;
+  if (account.lastSync !== undefined) result.last_sync = account.lastSync || null;
+  if (account.avatarUrl !== undefined) result.avatar_url = account.avatarUrl || null;
+  if (account.color !== undefined) result.color = account.color || null;
+  if (account.folderId !== undefined) result.folder_id = account.folderId || null;
+  if (account.ignored !== undefined) result.ignored = account.ignored ? 1 : 0;
+
+  return result;
 }
 
 function emailToDb(email: Partial<Email> & { id: string }): Partial<DbEmail> & { id: string } {

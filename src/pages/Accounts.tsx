@@ -545,7 +545,7 @@ const AccountsPage: React.FC = () => {
       
       // Save token to storage
       const existingKeys = await storage.get('aether-hub_keys_github') || {};
-      await storage.set('nexus_keys_github', {
+      await storage.set('aether-hub_keys_github', {
         ...existingKeys,
         'Personal Access Token': githubToken.trim()
       });

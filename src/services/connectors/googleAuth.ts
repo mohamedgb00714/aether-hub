@@ -71,7 +71,7 @@ export interface CalendarEvent {
  * Get Google OAuth credentials from settings
  */
 export async function getCredentials(): Promise<GoogleCredentials | null> {
-  const saved = await storage.get('nexus_keys_google cloud') as Record<string, string> | null;
+  const saved = await storage.get('aether-hub_keys_google cloud') as Record<string, string> | null;
   
   if (!saved || !saved['Client ID'] || !saved['Client Secret']) {
     console.error('❌ Google OAuth credentials not configured in Settings');
@@ -234,7 +234,7 @@ export async function getValidAccessToken(): Promise<string | null> {
   if (!tokens) {
     try {
       const db = await import('../database');
-      const accounts = await db.default.accounts.getAll();
+      const accounts = await db.db.accounts.getAll();
       const googleAccount = accounts.find(acc => acc.platform === 'google' && acc.isConnected && acc.refreshToken);
       
       if (googleAccount) {
@@ -267,6 +267,19 @@ export async function getValidAccessToken(): Promise<string | null> {
       // No refresh token, need to re-authenticate
       console.error('❌ No refresh token available - need to re-authenticate');
       await storage.remove(STORAGE_KEYS.GOOGLE_TOKENS);
+      // Also mark DB accounts as disconnected so UI reflects the real state
+      try {
+        const dbService = await import('../database');
+        const accounts = await dbService.db.accounts.getAll();
+        for (const acc of accounts) {
+          if (acc.platform === 'google' && acc.isConnected) {
+            await dbService.db.accounts.upsert({ id: acc.id, isConnected: false, status: 'error' });
+            console.log(`⚠️ Marked ${acc.email} as disconnected - no refresh token`);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to update DB account status:', e);
+      }
       return null;
     }
     
@@ -279,6 +292,19 @@ export async function getValidAccessToken(): Promise<string | null> {
       const message = error instanceof Error ? error.message : String(error);
       if (message.includes('invalid_grant') || message.includes('revoked')) {
         await storage.remove(STORAGE_KEYS.GOOGLE_TOKENS);
+        // Mark DB accounts as disconnected when grant is revoked
+        try {
+          const dbService = await import('../database');
+          const accounts = await dbService.db.accounts.getAll();
+          for (const acc of accounts) {
+            if (acc.platform === 'google' && acc.isConnected) {
+              await dbService.db.accounts.upsert({ id: acc.id, isConnected: false, status: 'error' });
+              console.log(`⚠️ Marked ${acc.email} as disconnected - token revoked`);
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to update DB account status:', e);
+        }
       }
       return null;
     }
@@ -504,6 +530,20 @@ export async function syncGoogleAccount(account: Account): Promise<{
       account.refreshToken = tokenResponse.refresh_token || account.refreshToken;
       account.tokenExpiresAt = new Date(tokenResponse.expires_at).toISOString();
       console.log(`✅ Google token ${noToken ? 'obtained' : 'refreshed'} for ${account.email}`);
+
+      // Persist refreshed tokens to DB immediately so they survive app restart
+      try {
+        const dbService = await import('../database');
+        await dbService.db.accounts.upsert({
+          id: account.id,
+          accessToken: account.accessToken,
+          refreshToken: account.refreshToken,
+          tokenExpiresAt: account.tokenExpiresAt,
+        });
+        console.log(`💾 Refreshed tokens saved to DB for ${account.email}`);
+      } catch (error_) {
+        console.warn('⚠️ Failed to persist refreshed tokens to DB:', error_);
+      }
     } catch (error) {
       console.error(`❌ Failed to refresh Google token for ${account.email}:`, error);
       throw error;

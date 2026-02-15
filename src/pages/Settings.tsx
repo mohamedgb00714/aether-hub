@@ -435,16 +435,17 @@ interface DiscoveryObjective {
   id: string;
   icon: string;
   label: string;
-  question: string;
+  category: string;
+  keywords: string[];
 }
 
 const DEFAULT_OBJECTIVES: DiscoveryObjective[] = [
-  { id: 'education', icon: 'AcademicCapIcon', label: 'Education', question: 'Tell me about your educational background. What degrees, certifications, or courses have you completed?' },
-  { id: 'career', icon: 'BriefcaseIcon', label: 'Career', question: 'What is your current role and career path? What are your professional goals and aspirations?' },
-  { id: 'interests', icon: 'RocketLaunchIcon', label: 'Interests', question: 'What hobbies or interests occupy your free time? What topics fascinate you the most?' },
-  { id: 'style', icon: 'LightBulbIcon', label: 'Style', question: 'How would you describe your communication style? Do you prefer formal or casual interactions?' },
-  { id: 'projects', icon: 'PresentationChartLineIcon', label: 'Projects', question: 'What projects are you currently working on? What are your main priorities right now?' },
-  { id: 'health', icon: 'HeartIcon', label: 'Health', question: 'What health and wellness goals are important to you? Any fitness routines or health habits?' },
+  { id: 'education', icon: 'AcademicCapIcon', label: 'Education', category: 'Education', keywords: ['degree', 'university', 'school', 'course', 'certification'] },
+  { id: 'career', icon: 'BriefcaseIcon', label: 'Career', category: 'Work', keywords: ['job', 'work', 'career', 'role', 'company'] },
+  { id: 'interests', icon: 'RocketLaunchIcon', label: 'Interests', category: 'Interests', keywords: ['hobby', 'interest', 'passion', 'enjoy'] },
+  { id: 'style', icon: 'LightBulbIcon', label: 'Style', category: 'Communication', keywords: ['communicate', 'style', 'formal', 'casual'] },
+  { id: 'projects', icon: 'PresentationChartLineIcon', label: 'Projects', category: 'Projects', keywords: ['project', 'building', 'working on', 'priority'] },
+  { id: 'health', icon: 'HeartIcon', label: 'Health', category: 'Health', keywords: ['health', 'fitness', 'exercise', 'wellness'] },
 ];
 
 const AVAILABLE_ICONS = [
@@ -457,7 +458,8 @@ const DiscoveryObjectivesSection = () => {
   const [objectives, setObjectives] = useState<DiscoveryObjective[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newLabel, setNewLabel] = useState('');
-  const [newQuestion, setNewQuestion] = useState('');
+  const [newCategory, setNewCategory] = useState('');
+  const [newKeywords, setNewKeywords] = useState('');
   const [newIcon, setNewIcon] = useState('LightBulbIcon');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -472,21 +474,23 @@ const DiscoveryObjectivesSection = () => {
   }, []);
 
   const handleAddObjective = async () => {
-    if (!newLabel.trim() || !newQuestion.trim()) return;
+    if (!newLabel.trim() || !newCategory.trim()) return;
     
     setIsSaving(true);
     const newObjective: DiscoveryObjective = {
       id: `custom_${Date.now()}`,
       icon: newIcon,
       label: newLabel.trim(),
-      question: newQuestion.trim(),
+      category: newCategory.trim(),
+      keywords: newKeywords.split(',').map(k => k.trim().toLowerCase()).filter(Boolean),
     };
     
     const updated = [...objectives, newObjective];
     await storage.set(STORAGE_KEYS.DISCOVERY_OBJECTIVES, updated);
     setObjectives(updated);
     setNewLabel('');
-    setNewQuestion('');
+    setNewCategory('');
+    setNewKeywords('');
     setNewIcon('LightBulbIcon');
     setShowAddForm(false);
     setIsSaving(false);
@@ -534,13 +538,23 @@ const DiscoveryObjectivesSection = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">Question</label>
-            <textarea
-              value={newQuestion}
-              onChange={(e) => setNewQuestion(e.target.value)}
-              placeholder="What question should be asked when clicking this objective?"
-              rows={3}
-              className="w-full px-4 py-2.5 bg-white border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-900 placeholder-slate-400 resize-none"
+            <label className="block text-sm font-bold text-slate-700 mb-2">Category</label>
+            <input
+              type="text"
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              placeholder="e.g., Work, Education, Health..."
+              className="w-full px-4 py-2.5 bg-white border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-900 placeholder-slate-400"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">Keywords (comma-separated)</label>
+            <input
+              type="text"
+              value={newKeywords}
+              onChange={(e) => setNewKeywords(e.target.value)}
+              placeholder="e.g., job, work, career, role"
+              className="w-full px-4 py-2.5 bg-white border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-900 placeholder-slate-400"
             />
           </div>
           <div>
@@ -570,7 +584,7 @@ const DiscoveryObjectivesSection = () => {
             </button>
             <button
               onClick={handleAddObjective}
-              disabled={!newLabel.trim() || !newQuestion.trim() || isSaving}
+              disabled={!newLabel.trim() || !newCategory.trim() || isSaving}
               className="px-6 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-sm font-bold disabled:opacity-50"
             >
               {isSaving ? 'Adding...' : 'Add Objective'}
@@ -588,7 +602,7 @@ const DiscoveryObjectivesSection = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="font-bold text-slate-900 text-sm">{obj.label}</h4>
-                <p className="text-xs text-slate-400 mt-1 truncate">{obj.question}</p>
+                <p className="text-xs text-slate-400 mt-1 truncate">{obj.category} · {(obj.keywords || []).join(', ')}</p>
               </div>
               <button
                 onClick={() => handleRemoveObjective(obj.id)}
