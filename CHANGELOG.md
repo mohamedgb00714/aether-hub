@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-02-15
+
+### Added
+- **Automation Results Page** 📊 - New dedicated page for viewing browser automation run history and analysis:
+  - Stats overview cards: total runs, success rate, failed count, average duration
+  - Filter tabs by status (All/Completed/Failed/Running)
+  - Expandable automation cards with full run history per automation
+  - Per-run details: status badges, timestamps, duration, error messages
+  - AI-powered analysis generation per run result via Gemini
+  - Result detail modal with raw output, errors, and AI analysis display
+  - Search by automation name or task description
+- **Automation Results sidebar link** in AI Agents menu group
+- **Automation API types** added to `ElectronAPI` interface (16 typed methods)
+
+### Changed
+- **Dashboard completely redesigned** 🎨 - Modern unified single-scroll layout replacing old tab-based view:
+  - Removed tab navigation (overview/inbox/calendar/activity) in favor of unified dashboard
+  - New hero header with greeting, date, time, search bar, sync button, and account filter
+  - 5 clickable stat cards row (Emails, Meetings, Messages, PRs, Automations) linking to respective pages
+  - Collapsible AI Daily Briefing dark-mode card with calendar + email summaries
+  - Bento grid layout: Today's Agenda (7-col), Important Emails (5-col), GitHub (5-col), Messages (4-col), Automations (3-col)
+  - Integrated Automations widget showing running/completed status with links to results page
+  - Intelligence Feed section with news sources in dark-mode card
+  - Simplified sync status bar replacing the old footer component
+  - Retained event detail modal and email reply modal with improved styling
+- Dashboard now uses `react-router-dom` navigation (`Link`, `useNavigate`) instead of internal tab state
+
+### Technical Details
+- New file: `src/pages/AutomationResults.tsx` - Full automation results page with history, filtering, and AI analysis
+- New route: `/automation-results` added to App.tsx routing
+- New sidebar link: "Auto Results" with `ChartBarIcon` in AI Agents menu group
+- Updated `src/types.ts`: Added `automation` interface to `ElectronAPI` with all 16 IPC method types
+- Dashboard reduced from tab-based architecture to single unified view for better UX
+
+---
+
 ## [1.1.0] - 2026-02-11
 
 ### Added
@@ -58,6 +94,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/mohamedgb00714/aether-hub/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/mohamedgb00714/aether-hub/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/mohamedgb00714/aether-hub/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/mohamedgb00714/aether-hub/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/mohamedgb00714/aether-hub/releases/tag/v1.0.0

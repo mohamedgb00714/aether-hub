@@ -385,6 +385,23 @@ export interface ElectronAPI {
   oauth: {
     openExternal: (url: string) => Promise<void>;
   };
+  automation: {
+    create: (automation: any) => Promise<{ success: boolean; id?: string; error?: string }>;
+    getAll: () => Promise<{ success: boolean; automations?: any[]; error?: string }>;
+    get: (id: string) => Promise<{ success: boolean; automation?: any; error?: string }>;
+    update: (id: string, updates: any) => Promise<{ success: boolean; error?: string }>;
+    delete: (id: string) => Promise<{ success: boolean; error?: string }>;
+    execute: (automationId: string, config: any) => Promise<{ success: boolean; error?: string }>;
+    stop: (automationId: string) => Promise<{ success: boolean; error?: string }>;
+    isRunning: (automationId: string) => Promise<boolean>;
+    getSchedulerStatus: () => Promise<any>;
+    setMaxConcurrent: (max: number) => Promise<void>;
+    reloadSchedules: () => Promise<void>;
+    createHistory: (history: any) => Promise<{ success: boolean; id?: string; error?: string }>;
+    getHistory: (automationId: string) => Promise<{ success: boolean; history?: any[]; error?: string }>;
+    updateHistory: (id: string, updates: any) => Promise<{ success: boolean; error?: string }>;
+    analyzeResult: (result: string, task: string) => Promise<{ success: boolean; analysis?: string; error?: string }>;
+  };
   db: any;
 }
 

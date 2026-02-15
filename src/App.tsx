@@ -23,6 +23,7 @@ import MicOverlayPage from './pages/MicOverlay';
 import NotesOverlayPage from './pages/NotesOverlay';
 import YouTubePage from './pages/YouTube';
 import AutomationsPage from './pages/Automations';
+import AutomationResultsPage from './pages/AutomationResults';
 import AIDeveloperPage from './pages/AIDeveloper';
 import AgentsPage from './pages/Agents';
 import TitleBar from './components/TitleBar';
@@ -459,6 +460,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             <SidebarLink to="/agents" icon={SparklesIcon} label="All Agents" badge="NEW" badgeColor="bg-purple-500" />
             <SidebarLink to="/chat" icon={ChatBubbleLeftRightIcon} label="Assistant" />
             <SidebarLink to="/automations" icon={PlayCircleIcon} label="Automations" badge="AI" badgeColor="bg-violet-500" />
+            <SidebarLink to="/automation-results" icon={ChartBarIcon} label="Auto Results" />
             <SidebarLink to="/ai-developer" icon={CommandLineIcon} label="AI Developer" badge="AI" badgeColor="bg-indigo-500" />
             <SidebarLink to="/youtube" icon={PlayCircleIcon} label="YouTube" badge="AI" badgeColor="bg-red-500" />
           </MenuGroup>
@@ -656,6 +658,7 @@ const App: React.FC = () => {
                   <Route path="/actions" element={<ActionsPage />} />
                   <Route path="/agents" element={<AgentsPage />} />
                   <Route path="/automations" element={<AutomationsPage />} />
+                  <Route path="/automation-results" element={<AutomationResultsPage />} />
                   <Route path="/ai-developer" element={<AIDeveloperPage />} />
                   <Route path="/accounts" element={<AccountsPage />} />
                   <Route path="/digest" element={<DigestPage />} />
