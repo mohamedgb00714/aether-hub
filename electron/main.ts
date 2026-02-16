@@ -1988,10 +1988,466 @@ ipcMain.handle('db:notes:upsert', (_event, note: any) => {
 
 ipcMain.handle('db:notes:delete', (_event, id: number) => {
   try {
-    database.notes.delete(id);
+    database.notes.delete (id);
     return true;
   } catch (error) {
     console.error('❌ MAIN: db:notes:delete failed:', error);
+    throw error;
+  }
+});
+
+// ========================================
+// INVOICING IPC HANDLERS
+// ========================================
+
+// Clients
+ipcMain.handle('invoicing:clients:getAll', () => {
+  try {
+    return database.clients.getAll();
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:clients:getAll failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:clients:getById', (_event, id: string) => {
+  try {
+    return database.clients.getById(id);
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:clients:getById failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:clients:search', (_event, query: string) => {
+  try {
+    return database.clients.search(query);
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:clients:search failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:clients:create', (_event, client: any) => {
+  try {
+    database.clients.upsert(client);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:clients:create failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:clients:update', (_event, id: string, updates: any) => {
+  try {
+    database.clients.upsert({ id, ...updates });
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:clients:update failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:clients:delete', (_event, id: string) => {
+  try {
+    database.clients.delete(id);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:clients:delete failed:', error);
+    throw error;
+  }
+});
+
+// Invoices
+ipcMain.handle('invoicing:invoices:getAll', () => {
+  try {
+    return database.invoices.getAll();
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:invoices:getAll failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:invoices:getById', (_event, id: string) => {
+  try {
+    return database.invoices.getById(id);
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:invoices:getById failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:invoices:getByStatus', (_event, status: string) => {
+  try {
+    return database.invoices.getByStatus(status);
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:invoices:getByStatus failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:invoices:getByClient', (_event, clientId: string) => {
+  try {
+    return database.invoices.getByClient(clientId);
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:invoices:getByClient failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:invoices:getByPaymentStatus', (_event, paymentStatus: string) => {
+  try {
+    return database.invoices.getByPaymentStatus(paymentStatus);
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:invoices:getByPaymentStatus failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:invoices:getOverdue', () => {
+  try {
+    return database.invoices.getOverdue();
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:invoices:getOverdue failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:invoices:getDueSoon', (_event, days: number) => {
+  try {
+    return database.invoices.getDueSoon(days);
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:invoices:getDueSoon failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:invoices:getByDateRange', (_event, startDate: string, endDate: string) => {
+  try {
+    return database.invoices.getByDateRange(startDate, endDate);
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:invoices:getByDateRange failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:invoices:getNextNumber', () => {
+  try {
+    return database.invoices.getNextInvoiceNumber();
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:invoices:getNextNumber failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:invoices:create', (_event, invoice: any) => {
+  try {
+    database.invoices.upsert(invoice);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:invoices:create failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:invoices:update', (_event, id: string, updates: any) => {
+  try {
+    database.invoices.upsert({ id, ...updates });
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:invoices:update failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:invoices:updateStatus', (_event, id: string, status: string) => {
+  try {
+    database.invoices.updateStatus(id, status);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:invoices:updateStatus failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:invoices:updatePayment', (_event, id: string, paymentStatus: string, paidAmount: number) => {
+  try {
+    database.invoices.updatePaymentStatus(id, paymentStatus, paidAmount);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:invoices:updatePayment failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:invoices:delete', (_event, id: string) => {
+  try {
+    database.invoices.delete(id);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:invoices:delete failed:', error);
+    throw error;
+  }
+});
+
+// Invoice Items
+ipcMain.handle('invoicing:items:getByInvoice', (_event, invoiceId: string) => {
+  try {
+    return database.invoiceItems.getByInvoice(invoiceId);
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:items:getByInvoice failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:items:create', (_event, item: any) => {
+  try {
+    database.invoiceItems.insert(item);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:items:create failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:items:update', (_event, id: string, updates: any) => {
+  try {
+    database.invoiceItems.update(id, updates);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:items:update failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:items:delete', (_event, id: string) => {
+  try {
+    database.invoiceItems.delete(id);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:items:delete failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:items:deleteByInvoice', (_event, invoiceId: string) => {
+  try {
+    database.invoiceItems.deleteByInvoice(invoiceId);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:items:deleteByInvoice failed:', error);
+    throw error;
+  }
+});
+
+// Payments
+ipcMain.handle('invoicing:payments:getAll', () => {
+  try {
+    return database.payments.getAll();
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:payments:getAll failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:payments:getByInvoice', (_event, invoiceId: string) => {
+  try {
+    return database.payments.getByInvoice(invoiceId);
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:payments:getByInvoice failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:payments:getByDateRange', (_event, startDate: string, endDate: string) => {
+  try {
+    return database.payments.getByDateRange(startDate, endDate);
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:payments:getByDateRange failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:payments:getTotalByInvoice', (_event, invoiceId: string) => {
+  try {
+    return database.payments.getTotalByInvoice(invoiceId);
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:payments:getTotalByInvoice failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:payments:create', (_event, payment: any) => {
+  try {
+    database.payments.insert(payment);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:payments:create failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:payments:delete', (_event, id: string) => {
+  try {
+    database.payments.delete(id);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:payments:delete failed:', error);
+    throw error;
+  }
+});
+
+// Taxes
+ipcMain.handle('invoicing:taxes:getAll', () => {
+  try {
+    return database.taxes.getAll();
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:taxes:getAll failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:taxes:getById', (_event, id: string) => {
+  try {
+    return database.taxes.getById(id);
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:taxes:getById failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:taxes:getDefault', () => {
+  try {
+    return database.taxes.getDefault();
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:taxes:getDefault failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:taxes:create', (_event, tax: any) => {
+  try {
+    database.taxes.upsert(tax);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:taxes:create failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:taxes:update', (_event, id: string, updates: any) => {
+  try {
+    database.taxes.upsert({ id, ...updates });
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:taxes:update failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:taxes:delete', (_event, id: string) => {
+  try {
+    database.taxes.delete(id);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:taxes:delete failed:', error);
+    throw error;
+  }
+});
+
+// Recurring Invoices
+ipcMain.handle('invoicing:recurring:getAll', () => {
+  try {
+    return database.recurringInvoices.getAll();
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:recurring:getAll failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:recurring:getById', (_event, id: string) => {
+  try {
+    return database.recurringInvoices.getById(id);
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:recurring:getById failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:recurring:getActive', () => {
+  try {
+    return database.recurringInvoices.getActive();
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:recurring:getActive failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:recurring:getDueToday', () => {
+  try {
+    return database.recurringInvoices.getDueToday();
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:recurring:getDueToday failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:recurring:create', (_event, profile: any) => {
+  try {
+    database.recurringInvoices.upsert(profile);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:recurring:create failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:recurring:update', (_event, id: string, updates: any) => {
+  try {
+    database.recurringInvoices.upsert({ id, ...updates });
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:recurring:update failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:recurring:updateNextDate', (_event, id: string, nextIssueDate: string) => {
+  try {
+    database.recurringInvoices.updateNextIssueDate(id, nextIssueDate);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:recurring:updateNextDate failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:recurring:delete', (_event, id: string) => {
+  try {
+    database.recurringInvoices.delete(id);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:recurring:delete failed:', error);
+    throw error;
+  }
+});
+
+// Invoice Settings
+ipcMain.handle('invoicing:settings:get', () => {
+  try {
+    return database.invoiceSettings.get();
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:settings:get failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('invoicing:settings:update', (_event, settings: any) => {
+  try {
+    database.invoiceSettings.upsert(settings);
+    return true;
+  } catch (error) {
+    console.error('❌ MAIN: invoicing:settings:update failed:', error);
     throw error;
   }
 });

@@ -430,6 +430,115 @@ export interface DbUserInterest {
   updated_at: string;
 }
 
+// Invoicing System Database Interfaces
+export interface DbClient {
+  id: string;
+  name: string;
+  company_name: string | null;
+  email: string;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  country: string | null;
+  postal_code: string | null;
+  tax_id: string | null; // VAT/NIF/Tax ID
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbInvoice {
+  id: string;
+  invoice_number: string; // Auto-increment or custom format
+  client_id: string;
+  status: string; // 'draft' | 'sent' | 'viewed' | 'paid' | 'overdue' | 'cancelled'
+  issue_date: string;
+  due_date: string;
+  currency: string; // ISO currency code (USD, EUR, DZD, etc.)
+  subtotal: number; // Calculated from items
+  tax_total: number; // Sum of all taxes
+  discount_total: number; // Total discounts
+  total: number; // Final amount
+  notes: string | null;
+  terms: string | null; // Payment terms
+  payment_status: string; // 'unpaid' | 'partial' | 'paid'
+  paid_amount: number; // Amount paid so far
+  recurring_profile_id: string | null; // Link to recurring profile if applicable
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbInvoiceItem {
+  id: string;
+  invoice_id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  tax_rate: number; // Percentage (e.g., 19 for 19%)
+  discount: number; // Fixed amount or percentage
+  discount_type: string; // 'percentage' | 'fixed'
+  line_total: number; // Calculated: (quantity * unit_price - discount) * (1 + tax_rate/100)
+  created_at: string;
+}
+
+export interface DbPayment {
+  id: string;
+  invoice_id: string;
+  payment_date: string;
+  amount: number;
+  method: string; // 'cash' | 'bank_transfer' | 'card' | 'crypto' | 'paypal' | 'other'
+  reference: string | null; // Transaction ID or check number
+  notes: string | null;
+  created_at: string;
+}
+
+export interface DbTax {
+  id: string;
+  name: string; // VAT, TVA, GST, etc.
+  rate: number; // Percentage
+  region: string | null; // Country/region where applicable
+  is_default: number; // SQLite boolean - default tax for new invoices
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbRecurringInvoiceProfile {
+  id: string;
+  client_id: string;
+  frequency: string; // 'weekly' | 'monthly' | 'quarterly' | 'yearly'
+  next_issue_date: string;
+  auto_send: number; // SQLite boolean
+  template_data: string; // JSON - invoice template (items, terms, notes)
+  is_active: number; // SQLite boolean
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbInvoiceSettings {
+  id: string;
+  company_name: string;
+  company_email: string | null;
+  company_phone: string | null;
+  company_address: string | null;
+  company_city: string | null;
+  company_country: string | null;
+  company_postal_code: string | null;
+  company_tax_id: string | null;
+  company_logo_url: string | null;
+  invoice_prefix: string; // e.g., "INV-"
+  invoice_number_start: number; // Starting number for invoices
+  default_currency: string;
+  default_tax_id: string | null;
+  default_payment_terms: string | null;
+  default_notes: string | null;
+  bank_name: string | null;
+  bank_account_number: string | null;
+  bank_swift: string | null;
+  bank_iban: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 class DatabaseManager {
   private db: Database.Database | null = null;
 
@@ -1123,6 +1232,163 @@ class DatabaseManager {
       CREATE INDEX IF NOT EXISTS idx_youtube_videos_analyzed ON youtube_videos(is_analyzed);
       CREATE INDEX IF NOT EXISTS idx_youtube_videos_value_score ON youtube_videos(ai_value_score);
       CREATE INDEX IF NOT EXISTS idx_user_interests_category ON user_interests(category);
+    `);
+
+    // ========================================
+    // INVOICING SYSTEM TABLES
+    // ========================================
+
+    // Clients table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS clients (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        company_name TEXT,
+        email TEXT NOT NULL,
+        phone TEXT,
+        address TEXT,
+        city TEXT,
+        country TEXT,
+        postal_code TEXT,
+        tax_id TEXT,
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Invoices table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS invoices (
+        id TEXT PRIMARY KEY,
+        invoice_number TEXT UNIQUE NOT NULL,
+        client_id TEXT NOT NULL,
+        status TEXT DEFAULT 'draft',
+        issue_date TEXT NOT NULL,
+        due_date TEXT NOT NULL,
+        currency TEXT DEFAULT 'USD',
+        subtotal REAL DEFAULT 0,
+        tax_total REAL DEFAULT 0,
+        discount_total REAL DEFAULT 0,
+        total REAL DEFAULT 0,
+        notes TEXT,
+        terms TEXT,
+        payment_status TEXT DEFAULT 'unpaid',
+        paid_amount REAL DEFAULT 0,
+        recurring_profile_id TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+        FOREIGN KEY (recurring_profile_id) REFERENCES recurring_invoice_profiles(id) ON DELETE SET NULL
+      )
+    `);
+
+    // Invoice Items table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS invoice_items (
+        id TEXT PRIMARY KEY,
+        invoice_id TEXT NOT NULL,
+        description TEXT NOT NULL,
+        quantity REAL DEFAULT 1,
+        unit_price REAL DEFAULT 0,
+        tax_rate REAL DEFAULT 0,
+        discount REAL DEFAULT 0,
+        discount_type TEXT DEFAULT 'fixed',
+        line_total REAL DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Payments table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS payments (
+        id TEXT PRIMARY KEY,
+        invoice_id TEXT NOT NULL,
+        payment_date TEXT NOT NULL,
+        amount REAL NOT NULL,
+        method TEXT DEFAULT 'cash',
+        reference TEXT,
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Taxes table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS taxes (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        rate REAL NOT NULL,
+        region TEXT,
+        is_default INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Recurring Invoice Profiles table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS recurring_invoice_profiles (
+        id TEXT PRIMARY KEY,
+        client_id TEXT NOT NULL,
+        frequency TEXT NOT NULL,
+        next_issue_date TEXT NOT NULL,
+        auto_send INTEGER DEFAULT 0,
+        template_data TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Invoice Settings table (singleton - only one row)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS invoice_settings (
+        id TEXT PRIMARY KEY DEFAULT '1',
+        company_name TEXT NOT NULL,
+        company_email TEXT,
+        company_phone TEXT,
+        company_address TEXT,
+        company_city TEXT,
+        company_country TEXT,
+        company_postal_code TEXT,
+        company_tax_id TEXT,
+        company_logo_url TEXT,
+        invoice_prefix TEXT DEFAULT 'INV-',
+        invoice_number_start INTEGER DEFAULT 1,
+        default_currency TEXT DEFAULT 'USD',
+        default_tax_id TEXT,
+        default_payment_terms TEXT,
+        default_notes TEXT,
+        bank_name TEXT,
+        bank_account_number TEXT,
+        bank_swift TEXT,
+        bank_iban TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (default_tax_id) REFERENCES taxes(id) ON DELETE SET NULL
+      )
+    `);
+
+    // Create indexes for invoicing tables
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_clients_email ON clients(email);
+      CREATE INDEX IF NOT EXISTS idx_clients_company ON clients(company_name);
+      CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_id);
+      CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+      CREATE INDEX IF NOT EXISTS idx_invoices_payment_status ON invoices(payment_status);
+      CREATE INDEX IF NOT EXISTS idx_invoices_due_date ON invoices(due_date);
+      CREATE INDEX IF NOT EXISTS idx_invoices_issue_date ON invoices(issue_date);
+      CREATE INDEX IF NOT EXISTS idx_invoices_number ON invoices(invoice_number);
+      CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id);
+      CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);
+      CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date);
+      CREATE INDEX IF NOT EXISTS idx_recurring_profiles_client ON recurring_invoice_profiles(client_id);
+      CREATE INDEX IF NOT EXISTS idx_recurring_profiles_active ON recurring_invoice_profiles(is_active);
+      CREATE INDEX IF NOT EXISTS idx_recurring_profiles_next_date ON recurring_invoice_profiles(next_issue_date);
     `);
 
     // Notes table
@@ -3588,6 +3854,409 @@ class DatabaseManager {
         knowledgeInsights: insightCount.count,
         userActivities: activityCount.count,
       };
+    },
+  };
+
+  // ========================================
+  // INVOICING SYSTEM REPOSITORIES
+  // ========================================
+
+  // Clients Repository
+  clients = {
+    getAll: (): DbClient[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM clients ORDER BY name ASC').all() as DbClient[];
+    },
+
+    getById: (id: string): DbClient | undefined => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM clients WHERE id = ?').get(id) as DbClient | undefined;
+    },
+
+    getByEmail: (email: string): DbClient | undefined => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM clients WHERE email = ?').get(email) as DbClient | undefined;
+    },
+
+    search: (query: string): DbClient[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      const like = `%${query}%`;
+      return this.db.prepare(`
+        SELECT * FROM clients 
+        WHERE name LIKE ? OR company_name LIKE ? OR email LIKE ?
+        ORDER BY name ASC
+      `).all(like, like, like) as DbClient[];
+    },
+
+    upsert: (client: Partial<DbClient> & { id: string }): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      
+      const existing = this.clients.getById(client.id);
+      
+      if (existing) {
+        const fields = Object.keys(client).filter(k => k !== 'id' && k !== 'created_at');
+        const setClause = fields.map(f => `${f} = @${f}`).join(', ');
+        const sql = `UPDATE clients SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = @id`;
+        this.db.prepare(sql).run(client);
+      } else {
+        const fields = Object.keys(client);
+        const placeholders = fields.map(f => `@${f}`).join(', ');
+        const sql = `INSERT INTO clients (${fields.join(', ')}) VALUES (${placeholders})`;
+        this.db.prepare(sql).run(client);
+      }
+    },
+
+    delete: (id: string): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      this.db.prepare('DELETE FROM clients WHERE id = ?').run(id);
+    },
+  };
+
+  // Invoices Repository
+  invoices = {
+    getAll: (): DbInvoice[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM invoices ORDER BY created_at DESC').all() as DbInvoice[];
+    },
+
+    getById: (id: string): DbInvoice | undefined => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM invoices WHERE id = ?').get(id) as DbInvoice | undefined;
+    },
+
+    getByStatus: (status: string): DbInvoice[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM invoices WHERE status = ? ORDER BY issue_date DESC')
+        .all(status) as DbInvoice[];
+    },
+
+    getByClient: (clientId: string): DbInvoice[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM invoices WHERE client_id = ? ORDER BY issue_date DESC')
+        .all(clientId) as DbInvoice[];
+    },
+
+    getByPaymentStatus: (paymentStatus: string): DbInvoice[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM invoices WHERE payment_status = ? ORDER BY due_date ASC')
+        .all(paymentStatus) as DbInvoice[];
+    },
+
+    getOverdue: (): DbInvoice[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      const today = new Date().toISOString();
+      return this.db.prepare(`
+        SELECT * FROM invoices 
+        WHERE due_date < ? AND payment_status != 'paid'
+        ORDER BY due_date ASC
+      `).all(today) as DbInvoice[];
+    },
+
+    getDueSoon: (days: number = 7): DbInvoice[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      const today = new Date().toISOString();
+      const futureDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+      return this.db.prepare(`
+        SELECT * FROM invoices 
+        WHERE due_date BETWEEN ? AND ? AND payment_status != 'paid'
+        ORDER BY due_date ASC
+      `).all(today, futureDate) as DbInvoice[];
+    },
+
+    getByDateRange: (startDate: string, endDate: string): DbInvoice[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare(`
+        SELECT * FROM invoices 
+        WHERE issue_date BETWEEN ? AND ?
+        ORDER BY issue_date DESC
+      `).all(startDate, endDate) as DbInvoice[];
+    },
+
+    getNextInvoiceNumber: (): string => {
+      if (!this.db) throw new Error('Database not initialized');
+      const settings = this.invoiceSettings.get();
+      const prefix = settings?.invoice_prefix || 'INV-';
+      const start = settings?.invoice_number_start || 1;
+      
+      const lastInvoice = this.db.prepare(`
+        SELECT invoice_number FROM invoices 
+        WHERE invoice_number LIKE ? 
+        ORDER BY created_at DESC LIMIT 1
+      `).get(`${prefix}%`) as { invoice_number: string } | undefined;
+      
+      if (!lastInvoice) {
+        return `${prefix}${String(start).padStart(4, '0')}`;
+      }
+      
+      const lastNumber = parseInt(lastInvoice.invoice_number.replace(prefix, '')) || start - 1;
+      return `${prefix}${String(lastNumber + 1).padStart(4, '0')}`;
+    },
+
+    upsert: (invoice: Partial<DbInvoice> & { id: string }): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      
+      const existing = this.invoices.getById(invoice.id);
+      
+      if (existing) {
+        const fields = Object.keys(invoice).filter(k => k !== 'id' && k !== 'created_at');
+        const setClause = fields.map(f => `${f} = @${f}`).join(', ');
+        const sql = `UPDATE invoices SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = @id`;
+        this.db.prepare(sql).run(invoice);
+      } else {
+        const fields = Object.keys(invoice);
+        const placeholders = fields.map(f => `@${f}`).join(', ');
+        const sql = `INSERT INTO invoices (${fields.join(', ')}) VALUES (${placeholders})`;
+        this.db.prepare(sql).run(invoice);
+      }
+    },
+
+    delete: (id: string): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      this.db.prepare('DELETE FROM invoices WHERE id = ?').run(id);
+    },
+
+    updateStatus: (id: string, status: string): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      this.db.prepare('UPDATE invoices SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+        .run(status, id);
+    },
+
+    updatePaymentStatus: (id: string, paymentStatus: string, paidAmount: number): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      this.db.prepare(`
+        UPDATE invoices 
+        SET payment_status = ?, paid_amount = ?, updated_at = CURRENT_TIMESTAMP 
+        WHERE id = ?
+      `).run(paymentStatus, paidAmount, id);
+    },
+  };
+
+  // Invoice Items Repository
+  invoiceItems = {
+    getAll: (): DbInvoiceItem[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM invoice_items').all() as DbInvoiceItem[];
+    },
+
+    getById: (id: string): DbInvoiceItem | undefined => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM invoice_items WHERE id = ?').get(id) as DbInvoiceItem | undefined;
+    },
+
+    getByInvoice: (invoiceId: string): DbInvoiceItem[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM invoice_items WHERE invoice_id = ? ORDER BY created_at ASC')
+        .all(invoiceId) as DbInvoiceItem[];
+    },
+
+    insert: (item: Omit<DbInvoiceItem, 'created_at'>): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      const fields = Object.keys(item);
+      const placeholders = fields.map(f => `@${f}`).join(', ');
+      const sql = `INSERT INTO invoice_items (${fields.join(', ')}) VALUES (${placeholders})`;
+      this.db.prepare(sql).run(item);
+    },
+
+    update: (id: string, item: Partial<DbInvoiceItem>): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      const fields = Object.keys(item).filter(k => k !== 'id' && k !== 'created_at');
+      const setClause = fields.map(f => `${f} = @${f}`).join(', ');
+      const sql = `UPDATE invoice_items SET ${setClause} WHERE id = @id`;
+      this.db.prepare(sql).run({ ...item, id });
+    },
+
+    delete: (id: string): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      this.db.prepare('DELETE FROM invoice_items WHERE id = ?').run(id);
+    },
+
+    deleteByInvoice: (invoiceId: string): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      this.db.prepare('DELETE FROM invoice_items WHERE invoice_id = ?').run(invoiceId);
+    },
+  };
+
+  // Payments Repository
+  payments = {
+    getAll: (): DbPayment[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM payments ORDER BY payment_date DESC').all() as DbPayment[];
+    },
+
+    getById: (id: string): DbPayment | undefined => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM payments WHERE id = ?').get(id) as DbPayment | undefined;
+    },
+
+    getByInvoice: (invoiceId: string): DbPayment[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM payments WHERE invoice_id = ? ORDER BY payment_date DESC')
+        .all(invoiceId) as DbPayment[];
+    },
+
+    getByDateRange: (startDate: string, endDate: string): DbPayment[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare(`
+        SELECT * FROM payments 
+        WHERE payment_date BETWEEN ? AND ?
+        ORDER BY payment_date DESC
+      `).all(startDate, endDate) as DbPayment[];
+    },
+
+    getTotalByInvoice: (invoiceId: string): number => {
+      if (!this.db) throw new Error('Database not initialized');
+      const result = this.db.prepare('SELECT SUM(amount) as total FROM payments WHERE invoice_id = ?')
+        .get(invoiceId) as { total: number | null };
+      return result.total || 0;
+    },
+
+    insert: (payment: Omit<DbPayment, 'created_at'>): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      const fields = Object.keys(payment);
+      const placeholders = fields.map(f => `@${f}`).join(', ');
+      const sql = `INSERT INTO payments (${fields.join(', ')}) VALUES (${placeholders})`;
+      this.db.prepare(sql).run(payment);
+    },
+
+    delete: (id: string): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      this.db.prepare('DELETE FROM payments WHERE id = ?').run(id);
+    },
+  };
+
+  // Taxes Repository
+  taxes = {
+    getAll: (): DbTax[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM taxes ORDER BY name ASC').all() as DbTax[];
+    },
+
+    getById: (id: string): DbTax | undefined => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM taxes WHERE id = ?').get(id) as DbTax | undefined;
+    },
+
+    getDefault: (): DbTax | undefined => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM taxes WHERE is_default = 1 LIMIT 1').get() as DbTax | undefined;
+    },
+
+    upsert: (tax: Partial<DbTax> & { id: string }): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      
+      // If setting as default, unset all others first
+      if (tax.is_default === 1) {
+        this.db.prepare('UPDATE taxes SET is_default = 0').run();
+      }
+      
+      const existing = this.taxes.getById(tax.id);
+      
+      if (existing) {
+        const fields = Object.keys(tax).filter(k => k !== 'id' && k !== 'created_at');
+        const setClause = fields.map(f => `${f} = @${f}`).join(', ');
+        const sql = `UPDATE taxes SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = @id`;
+        this.db.prepare(sql).run(tax);
+      } else {
+        const fields = Object.keys(tax);
+        const placeholders = fields.map(f => `@${f}`).join(', ');
+        const sql = `INSERT INTO taxes (${fields.join(', ')}) VALUES (${placeholders})`;
+        this.db.prepare(sql).run(tax);
+      }
+    },
+
+    delete: (id: string): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      this.db.prepare('DELETE FROM taxes WHERE id = ?').run(id);
+    },
+  };
+
+  // Recurring Invoice Profiles Repository
+  recurringInvoices = {
+    getAll: (): DbRecurringInvoiceProfile[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM recurring_invoice_profiles ORDER BY next_issue_date ASC')
+        .all() as DbRecurringInvoiceProfile[];
+    },
+
+    getById: (id: string): DbRecurringInvoiceProfile | undefined => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM recurring_invoice_profiles WHERE id = ?')
+        .get(id) as DbRecurringInvoiceProfile | undefined;
+    },
+
+    getActive: (): DbRecurringInvoiceProfile[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM recurring_invoice_profiles WHERE is_active = 1 ORDER BY next_issue_date ASC')
+        .all() as DbRecurringInvoiceProfile[];
+    },
+
+    getDueToday: (): DbRecurringInvoiceProfile[] => {
+      if (!this.db) throw new Error('Database not initialized');
+      const today = new Date().toISOString().split('T')[0];
+      return this.db.prepare(`
+        SELECT * FROM recurring_invoice_profiles 
+        WHERE is_active = 1 AND DATE(next_issue_date) <= DATE(?)
+        ORDER BY next_issue_date ASC
+      `).all(today) as DbRecurringInvoiceProfile[];
+    },
+
+    upsert: (profile: Partial<DbRecurringInvoiceProfile> & { id: string }): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      
+      const existing = this.recurringInvoices.getById(profile.id);
+      
+      if (existing) {
+        const fields = Object.keys(profile).filter(k => k !== 'id' && k !== 'created_at');
+        const setClause = fields.map(f => `${f} = @${f}`).join(', ');
+        const sql = `UPDATE recurring_invoice_profiles SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = @id`;
+        this.db.prepare(sql).run(profile);
+      } else {
+        const fields = Object.keys(profile);
+        const placeholders = fields.map(f => `@${f}`).join(', ');
+        const sql = `INSERT INTO recurring_invoice_profiles (${fields.join(', ')}) VALUES (${placeholders})`;
+        this.db.prepare(sql).run(profile);
+      }
+    },
+
+    delete: (id: string): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      this.db.prepare('DELETE FROM recurring_invoice_profiles WHERE id = ?').run(id);
+    },
+
+    updateNextIssueDate: (id: string, nextIssueDate: string): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      this.db.prepare(`
+        UPDATE recurring_invoice_profiles 
+        SET next_issue_date = ?, updated_at = CURRENT_TIMESTAMP 
+        WHERE id = ?
+      `).run(nextIssueDate, id);
+    },
+  };
+
+  // Invoice Settings Repository (Singleton)
+  invoiceSettings = {
+    get: (): DbInvoiceSettings | undefined => {
+      if (!this.db) throw new Error('Database not initialized');
+      return this.db.prepare('SELECT * FROM invoice_settings WHERE id = ?').get('1') as DbInvoiceSettings | undefined;
+    },
+
+    upsert: (settings: Partial<DbInvoiceSettings>): void => {
+      if (!this.db) throw new Error('Database not initialized');
+      
+      const existing = this.invoiceSettings.get();
+      
+      if (existing) {
+        const fields = Object.keys(settings).filter(k => k !== 'id' && k !== 'created_at');
+        const setClause = fields.map(f => `${f} = @${f}`).join(', ');
+        const sql = `UPDATE invoice_settings SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = '1'`;
+        this.db.prepare(sql).run(settings);
+      } else {
+        const data = { ...settings, id: '1' };
+        const fields = Object.keys(data);
+        const placeholders = fields.map(f => `@${f}`).join(', ');
+        const sql = `INSERT INTO invoice_settings (${fields.join(', ')}) VALUES (${placeholders})`;
+        this.db.prepare(sql).run(data);
+      }
     },
   };
 

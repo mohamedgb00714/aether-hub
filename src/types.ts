@@ -403,6 +403,74 @@ export interface ElectronAPI {
     analyzeResult: (result: string, task: string) => Promise<{ success: boolean; analysis?: string; error?: string }>;
   };
   db: any;
+  invoicing: {
+    // Clients
+    getAllClients: () => Promise<any[]>;
+    getClient: (id: string) => Promise<any>;
+    searchClients: (query: string) => Promise<any[]>;
+    createClient: (client: any) => Promise<boolean>;
+    updateClient: (id: string, updates: any) => Promise<boolean>;
+    deleteClient: (id: string) => Promise<boolean>;
+    
+    // Invoices
+    getAllInvoices: () => Promise<any[]>;
+    getInvoice: (id: string) => Promise<any>;
+    getInvoicesByStatus: (status: string) => Promise<any[]>;
+    getInvoicesByClient: (clientId: string) => Promise<any[]>;
+    getInvoicesByPaymentStatus: (paymentStatus: string) => Promise<any[]>;
+    getOverdueInvoices: () => Promise<any[]>;
+    getInvoicesDueSoon: (days?: number) => Promise<any[]>;
+    getInvoicesByDateRange: (startDate: string, endDate: string) => Promise<any[]>;
+    getNextInvoiceNumber: () => Promise<string>;
+    createInvoice: (invoice: any) => Promise<boolean>;
+    updateInvoice: (id: string, updates: any) => Promise<boolean>;
+    updateInvoiceStatus: (id: string, status: string) => Promise<boolean>;
+    updateInvoicePayment: (id: string, paymentStatus: string, paidAmount: number) => Promise<boolean>;
+    deleteInvoice: (id: string) => Promise<boolean>;
+    
+    // Invoice Items
+    getInvoiceItems: (invoiceId: string) => Promise<any[]>;
+    createInvoiceItem: (item: any) => Promise<boolean>;
+    updateInvoiceItem: (id: string, updates: any) => Promise<boolean>;
+    deleteInvoiceItem: (id: string) => Promise<boolean>;
+    deleteInvoiceItemsByInvoice: (invoiceId: string) => Promise<boolean>;
+    
+    // Payments
+    getAllPayments: () => Promise<any[]>;
+    getPaymentsByInvoice: (invoiceId: string) => Promise<any[]>;
+    getPaymentsByDateRange: (startDate: string, endDate: string) => Promise<any[]>;
+    getTotalPaymentsByInvoice: (invoiceId: string) => Promise<number>;
+    createPayment: (payment: any) => Promise<boolean>;
+    deletePayment: (id: string) => Promise<boolean>;
+    
+    // Taxes
+    getAllTaxes: () => Promise<any[]>;
+    getTax: (id: string) => Promise<any>;
+    getDefaultTax: () => Promise<any>;
+    createTax: (tax: any) => Promise<boolean>;
+    updateTax: (id: string, updates: any) => Promise<boolean>;
+    deleteTax: (id: string) => Promise<boolean>;
+    
+    // Recurring Invoices
+    getAllRecurringInvoices: () => Promise<any[]>;
+    getRecurringInvoice: (id: string) => Promise<any>;
+    getActiveRecurringInvoices: () => Promise<any[]>;
+    getRecurringInvoicesDueToday: () => Promise<any[]>;
+    createRecurringInvoice: (profile: any) => Promise<boolean>;
+    updateRecurringInvoice: (id: string, updates: any) => Promise<boolean>;
+    updateRecurringInvoiceNextDate: (id: string, nextIssueDate: string) => Promise<boolean>;
+    deleteRecurringInvoice: (id: string) => Promise<boolean>;
+    
+    // Invoice Settings
+    getInvoiceSettings: () => Promise<any>;
+    updateInvoiceSettings: (settings: any) => Promise<boolean>;
+    
+    // Reports & Analytics
+    getDashboardStats: () => Promise<any>;
+    getRevenueByPeriod: (startDate: string, endDate: string) => Promise<any[]>;
+    getTaxSummary: (startDate: string, endDate: string) => Promise<any[]>;
+    getClientRevenue: (clientId: string) => Promise<any>;
+  };
 }
 
 declare global {

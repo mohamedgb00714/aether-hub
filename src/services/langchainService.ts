@@ -1415,6 +1415,559 @@ export function createDatabaseTools(accountIds?: string[]) {
     }
   });
 
+  // ─── Invoicing Tools ─────────────────────────────────────────────────────
+
+  const inv = () => window.electronAPI!.invoicing;
+
+  // Clients
+  const listClientsTool = new DynamicStructuredTool({
+    name: 'list_clients',
+    description: 'List all invoicing clients. Use when the user asks about their clients, customers, or contacts for billing.',
+    schema: z.object({}),
+    func: async () => {
+      try {
+        const clients = await inv().getAllClients();
+        if (!clients.length) return 'No clients found. You can create one by providing name and email.';
+        return JSON.stringify(clients.map((c: any) => ({
+          id: c.id, name: c.name, company: c.companyName, email: c.email,
+          phone: c.phone, city: c.city, country: c.country, taxId: c.taxId
+        })), null, 2);
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  const searchClientsTool = new DynamicStructuredTool({
+    name: 'search_clients',
+    description: 'Search clients by name, email, or company name.',
+    schema: z.object({
+      query: z.string().describe('Search query (name, email, or company)')
+    }),
+    func: async ({ query }) => {
+      try {
+        const clients = await inv().searchClients(query);
+        if (!clients.length) return `No clients matched "${query}".`;
+        return JSON.stringify(clients.map((c: any) => ({
+          id: c.id, name: c.name, company: c.companyName, email: c.email
+        })), null, 2);
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  const createClientTool = new DynamicStructuredTool({
+    name: 'create_client',
+    description: 'Create a new invoicing client. Required: name and email. Optional: companyName, phone, address, city, country, postalCode, taxId, notes.',
+    schema: z.object({
+      name: z.string().describe('Client full name'),
+      email: z.string().describe('Client email address'),
+      companyName: z.string().optional().describe('Company name'),
+      phone: z.string().optional().describe('Phone number'),
+      address: z.string().optional().describe('Street address'),
+      city: z.string().optional().describe('City'),
+      country: z.string().optional().describe('Country code or name'),
+      postalCode: z.string().optional().describe('Postal/ZIP code'),
+      taxId: z.string().optional().describe('Tax ID / VAT number'),
+      notes: z.string().optional().describe('Notes about this client')
+    }),
+    func: async ({ name, email, companyName, phone, address, city, country, postalCode, taxId, notes }) => {
+      try {
+        const now = new Date().toISOString();
+        const id = crypto.randomUUID();
+        await inv().createClient({
+          id, name, email, companyName, phone, address, city, country, postalCode, taxId, notes,
+          createdAt: now, updatedAt: now
+        });
+        return `✅ Client "${name}" created successfully (ID: ${id}).`;
+      } catch (err: any) { return `Error creating client: ${err.message}`; }
+    }
+  });
+
+  const updateClientTool = new DynamicStructuredTool({
+    name: 'update_client',
+    description: 'Update an existing client by ID. Provide only the fields to change.',
+    schema: z.object({
+      id: z.string().describe('Client ID'),
+      name: z.string().optional().describe('Updated name'),
+      email: z.string().optional().describe('Updated email'),
+      companyName: z.string().optional().describe('Updated company name'),
+      phone: z.string().optional().describe('Updated phone'),
+      address: z.string().optional().describe('Updated address'),
+      city: z.string().optional().describe('Updated city'),
+      country: z.string().optional().describe('Updated country'),
+      postalCode: z.string().optional().describe('Updated postal code'),
+      taxId: z.string().optional().describe('Updated Tax ID'),
+      notes: z.string().optional().describe('Updated notes')
+    }),
+    func: async ({ id, ...updates }) => {
+      try {
+        const clean = Object.fromEntries(Object.entries(updates).filter(([_, v]) => v !== undefined));
+        await inv().updateClient(id, { ...clean, updatedAt: new Date().toISOString() });
+        return `✅ Client ${id} updated.`;
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  const deleteClientTool = new DynamicStructuredTool({
+    name: 'delete_client',
+    description: 'Delete a client by ID. Will fail if the client has existing invoices.',
+    schema: z.object({
+      id: z.string().describe('Client ID to delete')
+    }),
+    func: async ({ id }) => {
+      try {
+        const clientInvoices = await inv().getInvoicesByClient(id);
+        if (clientInvoices.length > 0) return `Cannot delete: client has ${clientInvoices.length} invoices. Delete or reassign them first.`;
+        await inv().deleteClient(id);
+        return `✅ Client ${id} deleted.`;
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  // Invoices
+  const listInvoicesTool = new DynamicStructuredTool({
+    name: 'list_invoices',
+    description: 'List invoices with optional filters. Use when user asks about invoices, bills, or outstanding amounts.',
+    schema: z.object({
+      status: z.string().optional().describe('Filter by status: draft, sent, viewed, paid, overdue, cancelled'),
+      paymentStatus: z.string().optional().describe('Filter by payment: unpaid, partial, paid'),
+      clientId: z.string().optional().describe('Filter by client ID')
+    }),
+    func: async ({ status, paymentStatus, clientId }) => {
+      try {
+        let invoices;
+        if (status) invoices = await inv().getInvoicesByStatus(status);
+        else if (paymentStatus) invoices = await inv().getInvoicesByPaymentStatus(paymentStatus);
+        else if (clientId) invoices = await inv().getInvoicesByClient(clientId);
+        else invoices = await inv().getAllInvoices();
+        if (!invoices.length) return 'No invoices found matching the criteria.';
+        const clients = await inv().getAllClients();
+        const clientMap = Object.fromEntries(clients.map((c: any) => [c.id, c.name]));
+        return JSON.stringify(invoices.map((i: any) => ({
+          id: i.id, number: i.invoiceNumber, client: clientMap[i.clientId] || i.clientId,
+          status: i.status, paymentStatus: i.paymentStatus,
+          total: i.total, paid: i.paidAmount, balance: i.total - i.paidAmount,
+          currency: i.currency, issueDate: i.issueDate, dueDate: i.dueDate
+        })), null, 2);
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  const getInvoiceDetailTool = new DynamicStructuredTool({
+    name: 'get_invoice_detail',
+    description: 'Get full details of a specific invoice including items, payments, and client info.',
+    schema: z.object({
+      invoiceId: z.string().describe('Invoice ID to look up')
+    }),
+    func: async ({ invoiceId }) => {
+      try {
+        const invoice = await inv().getInvoice(invoiceId);
+        if (!invoice) return `Invoice ${invoiceId} not found.`;
+        const items = await inv().getInvoiceItems(invoiceId);
+        const payments = await inv().getPaymentsByInvoice(invoiceId);
+        const client = await inv().getClient(invoice.clientId);
+        return JSON.stringify({
+          invoice: {
+            number: invoice.invoiceNumber, status: invoice.status, paymentStatus: invoice.paymentStatus,
+            subtotal: invoice.subtotal, tax: invoice.taxTotal, discount: invoice.discountTotal,
+            total: invoice.total, paid: invoice.paidAmount, balance: invoice.total - invoice.paidAmount,
+            currency: invoice.currency, issueDate: invoice.issueDate, dueDate: invoice.dueDate,
+            notes: invoice.notes, terms: invoice.terms
+          },
+          client: client ? { name: client.name, email: client.email, company: client.companyName } : null,
+          items: items.map((it: any) => ({
+            description: it.description, qty: it.quantity, unitPrice: it.unitPrice,
+            taxRate: it.taxRate, discount: it.discount, lineTotal: it.lineTotal
+          })),
+          payments: payments.map((p: any) => ({
+            date: p.paymentDate, amount: p.amount, method: p.method, reference: p.reference
+          }))
+        }, null, 2);
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  const createInvoiceTool = new DynamicStructuredTool({
+    name: 'create_invoice',
+    description: 'Create a new invoice for a client with line items. Auto-generates invoice number. Use when user says "create invoice", "bill client", etc.',
+    schema: z.object({
+      clientId: z.string().describe('Client ID to bill'),
+      issueDate: z.string().optional().describe('Issue date (YYYY-MM-DD, default: today)'),
+      dueDate: z.string().optional().describe('Due date (YYYY-MM-DD, default: 30 days from today)'),
+      currency: z.string().optional().describe('Currency code (default: USD)'),
+      notes: z.string().optional().describe('Notes for the client'),
+      terms: z.string().optional().describe('Payment terms'),
+      items: z.array(z.object({
+        description: z.string().describe('Item description'),
+        quantity: z.number().describe('Quantity'),
+        unitPrice: z.number().describe('Price per unit'),
+        taxRate: z.number().optional().describe('Tax rate percentage (default: 0)'),
+        discount: z.number().optional().describe('Discount amount (default: 0)'),
+        discountType: z.enum(['percentage', 'fixed']).optional().describe('Discount type (default: percentage)')
+      })).describe('Line items for the invoice')
+    }),
+    func: async ({ clientId, issueDate, dueDate, currency = 'USD', notes, terms, items }) => {
+      try {
+        const now = new Date();
+        const issue = issueDate || now.toISOString().split('T')[0];
+        const due = dueDate || new Date(now.getTime() + 30 * 86400000).toISOString().split('T')[0];
+        const invoiceNumber = await inv().getNextInvoiceNumber();
+        const invoiceId = crypto.randomUUID();
+
+        let subtotal = 0, taxTotal = 0, discountTotal = 0;
+        for (const item of items) {
+          const base = item.quantity * item.unitPrice;
+          const disc = (item.discountType === 'fixed' ? (item.discount || 0) : base * ((item.discount || 0) / 100));
+          const tax = (base - disc) * ((item.taxRate || 0) / 100);
+          subtotal += base;
+          discountTotal += disc;
+          taxTotal += tax;
+        }
+        const total = subtotal - discountTotal + taxTotal;
+
+        await inv().createInvoice({
+          id: invoiceId, invoiceNumber, clientId, status: 'draft',
+          issueDate: issue, dueDate: due, currency, subtotal, taxTotal, discountTotal, total,
+          notes, terms, paymentStatus: 'unpaid', paidAmount: 0,
+          createdAt: now.toISOString(), updatedAt: now.toISOString()
+        });
+
+        for (const item of items) {
+          const base = item.quantity * item.unitPrice;
+          const disc = (item.discountType === 'fixed' ? (item.discount || 0) : base * ((item.discount || 0) / 100));
+          const tax = (base - disc) * ((item.taxRate || 0) / 100);
+          await inv().createInvoiceItem({
+            id: crypto.randomUUID(), invoiceId,
+            description: item.description, quantity: item.quantity, unitPrice: item.unitPrice,
+            taxRate: item.taxRate || 0, discount: item.discount || 0,
+            discountType: item.discountType || 'percentage',
+            lineTotal: base - disc + tax, createdAt: now.toISOString()
+          });
+        }
+
+        return `✅ Invoice ${invoiceNumber} created for ${currency} ${total.toFixed(2)} (${items.length} items). Status: draft. ID: ${invoiceId}`;
+      } catch (err: any) { return `Error creating invoice: ${err.message}`; }
+    }
+  });
+
+  const updateInvoiceStatusTool = new DynamicStructuredTool({
+    name: 'update_invoice_status',
+    description: 'Change the status of an invoice (draft, sent, viewed, paid, overdue, cancelled). Use when user says "mark invoice as sent", "cancel invoice", etc.',
+    schema: z.object({
+      invoiceId: z.string().describe('Invoice ID'),
+      status: z.enum(['draft', 'sent', 'viewed', 'paid', 'overdue', 'cancelled']).describe('New status')
+    }),
+    func: async ({ invoiceId, status }) => {
+      try {
+        await inv().updateInvoiceStatus(invoiceId, status);
+        return `✅ Invoice status updated to "${status}".`;
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  const deleteInvoiceTool = new DynamicStructuredTool({
+    name: 'delete_invoice',
+    description: 'Delete an invoice and all its line items. Use with caution.',
+    schema: z.object({
+      invoiceId: z.string().describe('Invoice ID to delete')
+    }),
+    func: async ({ invoiceId }) => {
+      try {
+        await inv().deleteInvoiceItemsByInvoice(invoiceId);
+        await inv().deleteInvoice(invoiceId);
+        return `✅ Invoice ${invoiceId} and its items deleted.`;
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  const getOverdueInvoicesTool = new DynamicStructuredTool({
+    name: 'get_overdue_invoices',
+    description: 'Get all overdue invoices. Use when user asks about late payments, overdue bills, or unpaid invoices past due date.',
+    schema: z.object({}),
+    func: async () => {
+      try {
+        const overdue = await inv().getOverdueInvoices();
+        if (!overdue.length) return 'No overdue invoices. All payments are on track!';
+        const clients = await inv().getAllClients();
+        const clientMap = Object.fromEntries(clients.map((c: any) => [c.id, c.name]));
+        return JSON.stringify(overdue.map((i: any) => ({
+          number: i.invoiceNumber, client: clientMap[i.clientId] || i.clientId,
+          total: i.total, paid: i.paidAmount, balance: i.total - i.paidAmount,
+          dueDate: i.dueDate, daysOverdue: Math.ceil((Date.now() - new Date(i.dueDate).getTime()) / 86400000)
+        })), null, 2);
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  const getInvoicesDueSoonTool = new DynamicStructuredTool({
+    name: 'get_invoices_due_soon',
+    description: 'Get invoices due within the next N days. Use when user asks about upcoming payments or what is due soon.',
+    schema: z.object({
+      days: z.number().optional().describe('Number of days to look ahead (default: 7)')
+    }),
+    func: async ({ days = 7 }) => {
+      try {
+        const dueSoon = await inv().getInvoicesDueSoon(days);
+        if (!dueSoon.length) return `No invoices due in the next ${days} days.`;
+        const clients = await inv().getAllClients();
+        const clientMap = Object.fromEntries(clients.map((c: any) => [c.id, c.name]));
+        return JSON.stringify(dueSoon.map((i: any) => ({
+          number: i.invoiceNumber, client: clientMap[i.clientId] || i.clientId,
+          total: i.total, balance: i.total - i.paidAmount, dueDate: i.dueDate
+        })), null, 2);
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  // Payments
+  const recordPaymentTool = new DynamicStructuredTool({
+    name: 'record_payment',
+    description: 'Record a payment against an invoice. Automatically updates invoice payment status. Use when user says "record payment", "mark as paid", "received payment", etc.',
+    schema: z.object({
+      invoiceId: z.string().describe('Invoice ID to pay'),
+      amount: z.number().describe('Payment amount'),
+      method: z.enum(['cash', 'bank_transfer', 'card', 'paypal', 'crypto', 'other']).optional().describe('Payment method (default: bank_transfer)'),
+      paymentDate: z.string().optional().describe('Payment date YYYY-MM-DD (default: today)'),
+      reference: z.string().optional().describe('Transaction reference / ID'),
+      notes: z.string().optional().describe('Payment notes')
+    }),
+    func: async ({ invoiceId, amount, method = 'bank_transfer', paymentDate, reference, notes }) => {
+      try {
+        const invoice = await inv().getInvoice(invoiceId);
+        if (!invoice) return `Invoice ${invoiceId} not found.`;
+        const date = paymentDate || new Date().toISOString().split('T')[0];
+        await inv().createPayment({
+          id: crypto.randomUUID(), invoiceId, paymentDate: date, amount, method, reference, notes,
+          createdAt: new Date().toISOString()
+        });
+        const totalPaidBefore = await inv().getTotalPaymentsByInvoice(invoiceId);
+        const newPaid = totalPaidBefore;
+        const paymentStatus = newPaid >= invoice.total ? 'paid' : newPaid > 0 ? 'partial' : 'unpaid';
+        await inv().updateInvoicePayment(invoiceId, paymentStatus, newPaid);
+        if (paymentStatus === 'paid') await inv().updateInvoiceStatus(invoiceId, 'paid');
+        return `✅ Payment of ${invoice.currency} ${amount.toFixed(2)} recorded via ${method}. Invoice ${invoice.invoiceNumber} is now ${paymentStatus} (${invoice.currency} ${newPaid.toFixed(2)} / ${invoice.total.toFixed(2)}).`;
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  const listPaymentsTool = new DynamicStructuredTool({
+    name: 'list_payments',
+    description: 'List payment records, optionally filtered by invoice or date range.',
+    schema: z.object({
+      invoiceId: z.string().optional().describe('Filter by invoice ID'),
+      startDate: z.string().optional().describe('Start date YYYY-MM-DD'),
+      endDate: z.string().optional().describe('End date YYYY-MM-DD')
+    }),
+    func: async ({ invoiceId, startDate, endDate }) => {
+      try {
+        let payments;
+        if (invoiceId) payments = await inv().getPaymentsByInvoice(invoiceId);
+        else if (startDate && endDate) payments = await inv().getPaymentsByDateRange(startDate, endDate);
+        else payments = await inv().getAllPayments();
+        if (!payments.length) return 'No payments found.';
+        return JSON.stringify(payments.map((p: any) => ({
+          id: p.id, invoiceId: p.invoiceId, date: p.paymentDate,
+          amount: p.amount, method: p.method, reference: p.reference
+        })), null, 2);
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  // Taxes
+  const listTaxesTool = new DynamicStructuredTool({
+    name: 'list_taxes',
+    description: 'List all defined tax rates. Use when user asks about tax settings or rates.',
+    schema: z.object({}),
+    func: async () => {
+      try {
+        const taxes = await inv().getAllTaxes();
+        if (!taxes.length) return 'No tax rates defined. Create one with name and rate.';
+        return JSON.stringify(taxes.map((t: any) => ({
+          id: t.id, name: t.name, rate: `${t.rate}%`, region: t.region, isDefault: t.isDefault
+        })), null, 2);
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  const createTaxTool = new DynamicStructuredTool({
+    name: 'create_tax',
+    description: 'Create a new tax rate for invoicing.',
+    schema: z.object({
+      name: z.string().describe('Tax name (e.g. VAT, GST, Sales Tax)'),
+      rate: z.number().describe('Tax rate as percentage (e.g. 20 for 20%)'),
+      region: z.string().optional().describe('Region this tax applies to'),
+      isDefault: z.boolean().optional().describe('Set as default tax (default: false)')
+    }),
+    func: async ({ name, rate, region, isDefault = false }) => {
+      try {
+        const now = new Date().toISOString();
+        await inv().createTax({ id: crypto.randomUUID(), name, rate, region, isDefault, createdAt: now, updatedAt: now });
+        return `✅ Tax "${name}" (${rate}%) created.`;
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  // Recurring Invoices
+  const listRecurringInvoicesTool = new DynamicStructuredTool({
+    name: 'list_recurring_invoices',
+    description: 'List recurring invoice profiles. Use when user asks about subscriptions or auto-billing.',
+    schema: z.object({
+      activeOnly: z.boolean().optional().describe('Only show active profiles (default: false)')
+    }),
+    func: async ({ activeOnly = false }) => {
+      try {
+        const profiles = activeOnly ? await inv().getActiveRecurringInvoices() : await inv().getAllRecurringInvoices();
+        if (!profiles.length) return 'No recurring invoice profiles set up.';
+        const clients = await inv().getAllClients();
+        const clientMap = Object.fromEntries(clients.map((c: any) => [c.id, c.name]));
+        return JSON.stringify(profiles.map((p: any) => ({
+          id: p.id, client: clientMap[p.clientId] || p.clientId,
+          frequency: p.frequency, nextIssueDate: p.nextIssueDate,
+          isActive: p.isActive, autoSend: p.autoSend
+        })), null, 2);
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  const createRecurringInvoiceTool = new DynamicStructuredTool({
+    name: 'create_recurring_invoice',
+    description: 'Create a recurring invoice profile that auto-generates invoices on a schedule.',
+    schema: z.object({
+      clientId: z.string().describe('Client ID'),
+      frequency: z.enum(['weekly', 'monthly', 'quarterly', 'yearly']).describe('Billing frequency'),
+      nextIssueDate: z.string().describe('First issue date (YYYY-MM-DD)'),
+      autoSend: z.boolean().optional().describe('Auto-send to client (default: false)'),
+      currency: z.string().optional().describe('Currency code (default: USD)'),
+      notes: z.string().optional().describe('Invoice notes'),
+      items: z.array(z.object({
+        description: z.string(),
+        quantity: z.number(),
+        unitPrice: z.number(),
+        taxRate: z.number().optional(),
+        discount: z.number().optional(),
+        discountType: z.enum(['percentage', 'fixed']).optional()
+      })).describe('Template line items')
+    }),
+    func: async ({ clientId, frequency, nextIssueDate, autoSend = false, currency = 'USD', notes, items }) => {
+      try {
+        const now = new Date().toISOString();
+        await inv().createRecurringInvoice({
+          id: crypto.randomUUID(), clientId, frequency, nextIssueDate, autoSend, isActive: true,
+          templateData: JSON.stringify({ currency, notes, items }),
+          createdAt: now, updatedAt: now
+        });
+        return `✅ Recurring ${frequency} invoice created for client. Next issue: ${nextIssueDate}.`;
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  // Invoice Analytics / Dashboard
+  const getInvoiceDashboardTool = new DynamicStructuredTool({
+    name: 'get_invoice_dashboard',
+    description: 'Get invoicing dashboard statistics: total revenue, outstanding amount, overdue count, client count, etc. Use when user asks "how is my invoicing?", "revenue summary", "billing overview".',
+    schema: z.object({}),
+    func: async () => {
+      try {
+        const [invoices, clients, payments] = await Promise.all([
+          inv().getAllInvoices(), inv().getAllClients(), inv().getAllPayments()
+        ]);
+        const paid = invoices.filter((i: any) => i.paymentStatus === 'paid');
+        const totalRevenue = paid.reduce((s: number, i: any) => s + i.total, 0);
+        const outstanding = invoices.filter((i: any) => i.paymentStatus !== 'paid' && i.status !== 'cancelled')
+          .reduce((s: number, i: any) => s + (i.total - i.paidAmount), 0);
+        const overdue = invoices.filter((i: any) => i.status === 'overdue');
+        const totalPayments = payments.reduce((s: number, p: any) => s + p.amount, 0);
+        return JSON.stringify({
+          summary: {
+            totalRevenue: totalRevenue.toFixed(2),
+            outstandingBalance: outstanding.toFixed(2),
+            overdueCount: overdue.length,
+            overdueAmount: overdue.reduce((s: number, i: any) => s + (i.total - i.paidAmount), 0).toFixed(2),
+            totalClients: clients.length,
+            totalInvoices: invoices.length,
+            paidInvoices: paid.length,
+            unpaidInvoices: invoices.filter((i: any) => i.paymentStatus === 'unpaid').length,
+            partialInvoices: invoices.filter((i: any) => i.paymentStatus === 'partial').length,
+            totalPaymentsReceived: totalPayments.toFixed(2),
+            draftInvoices: invoices.filter((i: any) => i.status === 'draft').length,
+            sentInvoices: invoices.filter((i: any) => i.status === 'sent').length,
+            cancelledInvoices: invoices.filter((i: any) => i.status === 'cancelled').length
+          }
+        }, null, 2);
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  const getRevenueByPeriodTool = new DynamicStructuredTool({
+    name: 'get_revenue_by_period',
+    description: 'Get revenue breakdown for a date range. Use for monthly/quarterly/yearly revenue reports.',
+    schema: z.object({
+      startDate: z.string().describe('Start date YYYY-MM-DD'),
+      endDate: z.string().describe('End date YYYY-MM-DD')
+    }),
+    func: async ({ startDate, endDate }) => {
+      try {
+        const invoices = await inv().getInvoicesByDateRange(startDate, endDate);
+        if (!invoices.length) return `No invoices found between ${startDate} and ${endDate}.`;
+        const paid = invoices.filter((i: any) => i.paymentStatus === 'paid');
+        const total = invoices.reduce((s: number, i: any) => s + i.total, 0);
+        const collected = paid.reduce((s: number, i: any) => s + i.total, 0);
+        return JSON.stringify({
+          period: { start: startDate, end: endDate },
+          totalBilled: total.toFixed(2),
+          totalCollected: collected.toFixed(2),
+          outstandingInPeriod: (total - collected).toFixed(2),
+          invoiceCount: invoices.length,
+          paidCount: paid.length,
+          averageInvoice: (total / invoices.length).toFixed(2)
+        }, null, 2);
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  const getClientRevenueTool = new DynamicStructuredTool({
+    name: 'get_client_revenue',
+    description: 'Get revenue and invoice summary for a specific client. Use for client profitability analysis.',
+    schema: z.object({
+      clientId: z.string().describe('Client ID to analyze')
+    }),
+    func: async ({ clientId }) => {
+      try {
+        const client = await inv().getClient(clientId);
+        if (!client) return `Client ${clientId} not found.`;
+        const clientInvoices = await inv().getInvoicesByClient(clientId);
+        const paid = clientInvoices.filter((i: any) => i.paymentStatus === 'paid');
+        const totalBilled = clientInvoices.reduce((s: number, i: any) => s + i.total, 0);
+        const totalPaid = paid.reduce((s: number, i: any) => s + i.total, 0);
+        return JSON.stringify({
+          client: { name: client.name, email: client.email, company: client.companyName },
+          totalBilled: totalBilled.toFixed(2),
+          totalPaid: totalPaid.toFixed(2),
+          outstanding: (totalBilled - totalPaid).toFixed(2),
+          invoiceCount: clientInvoices.length,
+          paidCount: paid.length,
+          overdueCount: clientInvoices.filter((i: any) => i.status === 'overdue').length
+        }, null, 2);
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
+  // Invoice Settings
+  const getInvoiceSettingsTool = new DynamicStructuredTool({
+    name: 'get_invoice_settings',
+    description: 'Get current invoice settings (company info, invoice prefix, currency, bank details).',
+    schema: z.object({}),
+    func: async () => {
+      try {
+        const settings = await inv().getInvoiceSettings();
+        if (!settings) return 'No invoice settings configured yet. Advise the user to set up company info in Invoicing > Settings.';
+        return JSON.stringify({
+          company: { name: settings.companyName, email: settings.companyEmail, phone: settings.companyPhone, taxId: settings.companyTaxId },
+          defaults: { prefix: settings.invoicePrefix, currency: settings.defaultCurrency, terms: settings.defaultPaymentTerms },
+          bank: { name: settings.bankName, iban: settings.bankIban, swift: settings.bankSwift }
+        }, null, 2);
+      } catch (err: any) { return `Error: ${err.message}`; }
+    }
+  });
+
   return [
     searchEmailsTool,
     findEventsTool,
@@ -1446,7 +1999,30 @@ export function createDatabaseTools(accountIds?: string[]) {
     createNoteTool,
     getNotesTool,
     updateNoteTool,
-    deleteNoteTool
+    deleteNoteTool,
+    // Invoicing tools
+    listClientsTool,
+    searchClientsTool,
+    createClientTool,
+    updateClientTool,
+    deleteClientTool,
+    listInvoicesTool,
+    getInvoiceDetailTool,
+    createInvoiceTool,
+    updateInvoiceStatusTool,
+    deleteInvoiceTool,
+    getOverdueInvoicesTool,
+    getInvoicesDueSoonTool,
+    recordPaymentTool,
+    listPaymentsTool,
+    listTaxesTool,
+    createTaxTool,
+    listRecurringInvoicesTool,
+    createRecurringInvoiceTool,
+    getInvoiceDashboardTool,
+    getRevenueByPeriodTool,
+    getClientRevenueTool,
+    getInvoiceSettingsTool,
   ];
 
   // Tool: Get Knowledge Context
@@ -1613,7 +2189,30 @@ export function createDatabaseTools(accountIds?: string[]) {
     getKnowledgeContextTool,
     getKnowledgeInsightsTool,
     getUserActivitiesTool,
-    saveKnowledgeInsightTool
+    saveKnowledgeInsightTool,
+    // Invoicing tools
+    listClientsTool,
+    searchClientsTool,
+    createClientTool,
+    updateClientTool,
+    deleteClientTool,
+    listInvoicesTool,
+    getInvoiceDetailTool,
+    createInvoiceTool,
+    updateInvoiceStatusTool,
+    deleteInvoiceTool,
+    getOverdueInvoicesTool,
+    getInvoicesDueSoonTool,
+    recordPaymentTool,
+    listPaymentsTool,
+    listTaxesTool,
+    createTaxTool,
+    listRecurringInvoicesTool,
+    createRecurringInvoiceTool,
+    getInvoiceDashboardTool,
+    getRevenueByPeriodTool,
+    getClientRevenueTool,
+    getInvoiceSettingsTool,
   ];
 }
 

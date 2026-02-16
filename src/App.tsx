@@ -26,6 +26,7 @@ import AutomationsPage from './pages/Automations';
 import AutomationResultsPage from './pages/AutomationResults';
 import AIDeveloperPage from './pages/AIDeveloper';
 import AgentsPage from './pages/Agents';
+import InvoicingPage from './pages/Invoicing';
 import TitleBar from './components/TitleBar';
 import ErrorBoundary from './components/ErrorBoundary';
 import FloatingChatBubble from './components/FloatingChatBubble';
@@ -62,6 +63,8 @@ import {
   LightBulbIcon,
   WrenchScrewdriverIcon,
   PlayCircleIcon,
+  BanknotesIcon,
+  ReceiptPercentIcon,
 } from '@heroicons/react/24/outline';
 import { UserIcon } from '@heroicons/react/24/solid';
 import { startWatchMonitor } from './services/watchMonitor';
@@ -439,6 +442,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             <SidebarLink to="/actions" icon={BoltIcon} label="Actions" badge="AI" badgeColor="bg-purple-500" />
             <SidebarLink to="/digest" icon={SparklesIcon} label="Intelligent Briefing" />
             <SidebarLink to="/intelligence" icon={BoltIcon} label="Intelligence Feed" badge="AI" badgeColor="bg-purple-500" />
+            <SidebarLink to="/automation-results" icon={ChartBarIcon} label="Auto Results" />
           </MenuGroup>
 
           <MenuGroup title="Communications" icon={ChatBubbleBottomCenterTextIcon} defaultExpanded={false}>
@@ -460,9 +464,12 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             <SidebarLink to="/agents" icon={SparklesIcon} label="All Agents" badge="NEW" badgeColor="bg-purple-500" />
             <SidebarLink to="/chat" icon={ChatBubbleLeftRightIcon} label="Assistant" />
             <SidebarLink to="/automations" icon={PlayCircleIcon} label="Automations" badge="AI" badgeColor="bg-violet-500" />
-            <SidebarLink to="/automation-results" icon={ChartBarIcon} label="Auto Results" />
             <SidebarLink to="/ai-developer" icon={CommandLineIcon} label="AI Developer" badge="AI" badgeColor="bg-indigo-500" />
             <SidebarLink to="/youtube" icon={PlayCircleIcon} label="YouTube" badge="AI" badgeColor="bg-red-500" />
+          </MenuGroup>
+
+          <MenuGroup title="Invoicing" icon={BanknotesIcon} defaultExpanded={false}>
+            <SidebarLink to="/invoicing" icon={ReceiptPercentIcon} label="Invoices" badge="NEW" badgeColor="bg-emerald-500" />
           </MenuGroup>
 
           <MenuGroup title="Knowledge" icon={LightBulbIcon} defaultExpanded={false}>
@@ -660,6 +667,7 @@ const App: React.FC = () => {
                   <Route path="/automations" element={<AutomationsPage />} />
                   <Route path="/automation-results" element={<AutomationResultsPage />} />
                   <Route path="/ai-developer" element={<AIDeveloperPage />} />
+                  <Route path="/invoicing" element={<InvoicingPage />} />
                   <Route path="/accounts" element={<AccountsPage />} />
                   <Route path="/digest" element={<DigestPage />} />
                   <Route path="/chat" element={<ChatAssistant />} />

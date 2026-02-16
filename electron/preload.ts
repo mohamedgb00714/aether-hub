@@ -273,174 +273,79 @@ contextBridge.exposeInMainWorld('electronAPI', {
       upsert: (note: any) => ipcRenderer.invoke('db:notes:upsert', note),
       delete: (id: number) => ipcRenderer.invoke('db:notes:delete', id),
     },
-    chatSessions: {
-      getAll: () => ipcRenderer.invoke('db:chatSessions:getAll'),
-      getById: (id: string) => ipcRenderer.invoke('db:chatSessions:getById', id),
-      create: (session: any) => ipcRenderer.invoke('db:chatSessions:create', session),
-      update: (id: string, updates: any) => ipcRenderer.invoke('db:chatSessions:update', id, updates),
-      delete: (id: string) => ipcRenderer.invoke('db:chatSessions:delete', id),
-    },
-    chatMessages: {
-      getBySession: (sessionId: string) => ipcRenderer.invoke('db:chatMessages:getBySession', sessionId),
-      create: (message: any) => ipcRenderer.invoke('db:chatMessages:create', message),
-      deleteBySession: (sessionId: string) => ipcRenderer.invoke('db:chatMessages:deleteBySession', sessionId),
-    },
-    knowledgeMessages: {
-      getAll: () => ipcRenderer.invoke('db:knowledgeMessages:getAll'),
-      create: (message: any) => ipcRenderer.invoke('db:knowledgeMessages:create', message),
-      deleteAll: () => ipcRenderer.invoke('db:knowledgeMessages:deleteAll'),
-    },
-    knowledgeInsights: {
-      getAll: () => ipcRenderer.invoke('db:knowledgeInsights:getAll'),
-      create: (insight: any) => ipcRenderer.invoke('db:knowledgeInsights:create', insight),
-      update: (id: string, updates: any) => ipcRenderer.invoke('db:knowledgeInsights:update', id, updates),
-      delete: (id: string) => ipcRenderer.invoke('db:knowledgeInsights:delete', id),
-      deleteAll: () => ipcRenderer.invoke('db:knowledgeInsights:deleteAll'),
-    },
-    userActivities: {
-      getAll: (limit: number = 100) => ipcRenderer.invoke('db:userActivities:getAll', limit),
-      getByPlatform: (platform: string, limit: number = 100) => ipcRenderer.invoke('db:userActivities:getByPlatform', platform, limit),
-      getByDateRange: (startDate: string, endDate: string) => ipcRenderer.invoke('db:userActivities:getByDateRange', startDate, endDate),
-      getByActionType: (actionType: string, limit: number = 100) => ipcRenderer.invoke('db:userActivities:getByActionType', actionType, limit),
-      insert: (activity: any) => ipcRenderer.invoke('db:userActivities:insert', activity),
-      deleteOlderThan: (days: number) => ipcRenderer.invoke('db:userActivities:deleteOlderThan', days),
-    },
-    knowledgeContext: {
-      getAll: () => ipcRenderer.invoke('db:knowledgeContext:getAll'),
-      getByCategory: (category: string) => ipcRenderer.invoke('db:knowledgeContext:getByCategory', category),
-      get: (category: string, key: string) => ipcRenderer.invoke('db:knowledgeContext:get', category, key),
-      upsert: (context: any) => ipcRenderer.invoke('db:knowledgeContext:upsert', context),
-      delete: (id: string) => ipcRenderer.invoke('db:knowledgeContext:delete', id),
-    },
-    conversationSummaries: {
-      getAll: (limit: number = 50) => ipcRenderer.invoke('db:conversationSummaries:getAll', limit),
-      getByPlatform: (platform: string, limit: number = 50) => ipcRenderer.invoke('db:conversationSummaries:getByPlatform', platform, limit),
-      get: (platform: string, threadId: string) => ipcRenderer.invoke('db:conversationSummaries:get', platform, threadId),
-      upsert: (summary: any) => ipcRenderer.invoke('db:conversationSummaries:upsert', summary),
-      delete: (id: string) => ipcRenderer.invoke('db:conversationSummaries:delete', id),
-    },
-    whatsapp: {
-      getChats: (accountId: string) => ipcRenderer.invoke('db:whatsapp:getChats', accountId),
-      getMessages: (chatId: string, limit?: number) => ipcRenderer.invoke('db:whatsapp:getMessages', chatId, limit),
-      getRecentMessages: (accountId: string, limit?: number) => ipcRenderer.invoke('db:whatsapp:getRecentMessages', accountId, limit),
-      getAccounts: () => ipcRenderer.invoke('db:whatsapp:getAccounts'),
-    },
-    discord: {
-      getGuilds: (accountId: string) => ipcRenderer.invoke('db:discord:getGuilds', accountId),
-      getMessages: (channelId: string, limit?: number) => ipcRenderer.invoke('db:discord:getMessages', channelId, limit),
-      getRecentMessages: (accountId: string, limit?: number) => ipcRenderer.invoke('db:discord:getRecentMessages', accountId, limit),
-    },
-    telegram: {
-      getConnectedAccount: () => ipcRenderer.invoke('db:telegram:getConnectedAccount'),
-      updateAISettings: (id: string, aiSettings: string) => ipcRenderer.invoke('db:telegram:updateAISettings', id, aiSettings),
-      getAccounts: () => ipcRenderer.invoke('db:telegram:getAccounts'),
-      getChats: (accountId: string) => ipcRenderer.invoke('db:telegram:getChats', accountId),
-      getMessages: (chatId: string, limit?: number) => ipcRenderer.invoke('db:telegram:getMessages', chatId, limit),
-      upsertAccount: (account: any) => ipcRenderer.invoke('db:telegram:upsertAccount', account),
-    },
-    watchedItems: {
-      getAll: () => ipcRenderer.invoke('db:watchedItems:getAll'),
-      getByPlatform: (platform: string) => ipcRenderer.invoke('db:watchedItems:getByPlatform', platform),
-      getByStatus: (actionStatus: string) => ipcRenderer.invoke('db:watchedItems:getByStatus', actionStatus),
-      getActive: () => ipcRenderer.invoke('db:watchedItems:getActive'),
-      getPending: () => ipcRenderer.invoke('db:watchedItems:getPending'),
-      getById: (id: string) => ipcRenderer.invoke('db:watchedItems:getById', id),
-      getByItemId: (platform: string, itemType: string, itemId: string) => ipcRenderer.invoke('db:watchedItems:getByItemId', platform, itemType, itemId),
-      isWatched: (platform: string, itemType: string, itemId: string) => ipcRenderer.invoke('db:watchedItems:isWatched', platform, itemType, itemId),
-      create: (item: any) => ipcRenderer.invoke('db:watchedItems:create', item),
-      update: (id: string, updates: any) => ipcRenderer.invoke('db:watchedItems:update', id, updates),
-      updateStatus: (id: string, actionStatus: string) => ipcRenderer.invoke('db:watchedItems:updateStatus', id, actionStatus),
-      toggleWatch: (id: string) => ipcRenderer.invoke('db:watchedItems:toggleWatch', id),
-      delete: (id: string) => ipcRenderer.invoke('db:watchedItems:delete', id),
-      deleteByItemId: (platform: string, itemType: string, itemId: string) => ipcRenderer.invoke('db:watchedItems:deleteByItemId', platform, itemType, itemId),
-      clearCompleted: () => ipcRenderer.invoke('db:watchedItems:clearCompleted'),
-      clearDismissed: () => ipcRenderer.invoke('db:watchedItems:clearDismissed'),
-    },
-    watchActions: {
-      getAll: () => ipcRenderer.invoke('db:watchActions:getAll'),
-      getByStatus: (status: string) => ipcRenderer.invoke('db:watchActions:getByStatus', status),
-      getByWatchedItem: (watchedItemId: string) => ipcRenderer.invoke('db:watchActions:getByWatchedItem', watchedItemId),
-      create: (action: any) => ipcRenderer.invoke('db:watchActions:create', action),
-      updateStatus: (id: string, status: string) => ipcRenderer.invoke('db:watchActions:updateStatus', id, status),
-      delete: (id: string) => ipcRenderer.invoke('db:watchActions:delete', id),
-      clearCompleted: () => ipcRenderer.invoke('db:watchActions:clearCompleted'),
-      clearDismissed: () => ipcRenderer.invoke('db:watchActions:clearDismissed'),
-    },
-    analyzedMessages: {
-      isAnalyzed: (watchedItemId: string, messageId: string) => ipcRenderer.invoke('db:analyzedMessages:isAnalyzed', watchedItemId, messageId),
-      markAsAnalyzed: (watchedItemId: string, messageIds: string[], platform: string) => ipcRenderer.invoke('db:analyzedMessages:markAsAnalyzed', watchedItemId, messageIds, platform),
-      getAnalyzedIds: (watchedItemId: string) => ipcRenderer.invoke('db:analyzedMessages:getAnalyzedIds', watchedItemId),
-      clearByWatchedItem: (watchedItemId: string) => ipcRenderer.invoke('db:analyzedMessages:clearByWatchedItem', watchedItemId),
-    },
-    resendTemplates: {
-      getAll: () => ipcRenderer.invoke('db:resendTemplates:getAll'),
-      getById: (id: string) => ipcRenderer.invoke('db:resendTemplates:getById', id),
-      create: (template: any) => ipcRenderer.invoke('db:resendTemplates:create', template),
-      update: (id: string, updates: any) => ipcRenderer.invoke('db:resendTemplates:update', id, updates),
-      delete: (id: string) => ipcRenderer.invoke('db:resendTemplates:delete', id),
-    },
-    resendSentEmails: {
-      getAll: (limit?: number) => ipcRenderer.invoke('db:resendSentEmails:getAll', limit),
-      getById: (id: string) => ipcRenderer.invoke('db:resendSentEmails:getById', id),
-      create: (email: any) => ipcRenderer.invoke('db:resendSentEmails:create', email),
-      updateEvent: (id: string, lastEvent: string, clicks?: number, opens?: number) => ipcRenderer.invoke('db:resendSentEmails:updateEvent', id, lastEvent, clicks, opens),
-      delete: (id: string) => ipcRenderer.invoke('db:resendSentEmails:delete', id),
-      deleteAll: () => ipcRenderer.invoke('db:resendSentEmails:deleteAll'),
-    },
-    intelligenceFeeds: {
-      getAll: () => ipcRenderer.invoke('db:intelligenceFeeds:getAll'),
-      getRecent: (limit: number) => ipcRenderer.invoke('db:intelligenceFeeds:getRecent', limit),
-      getByCategory: (category: string) => ipcRenderer.invoke('db:intelligenceFeeds:getByCategory', category),
-      getById: (id: string) => ipcRenderer.invoke('db:intelligenceFeeds:getById', id),
-      create: (feed: any) => ipcRenderer.invoke('db:intelligenceFeeds:create', feed),
-      delete: (id: string) => ipcRenderer.invoke('db:intelligenceFeeds:delete', id),
-      deleteOlderThan: (days: number) => ipcRenderer.invoke('db:intelligenceFeeds:deleteOlderThan', days),
-    },
-    // YouTube Database Operations
-    youtube: {
-      channels: {
-        getAll: () => ipcRenderer.invoke('db:youtube:channels:getAll'),
-        getActive: () => ipcRenderer.invoke('db:youtube:channels:getActive'),
-        getById: (id: string) => ipcRenderer.invoke('db:youtube:channels:getById', id),
-        getByChannelId: (channelId: string) => ipcRenderer.invoke('db:youtube:channels:getByChannelId', channelId),
-        create: (channel: any) => ipcRenderer.invoke('db:youtube:channels:create', channel),
-        update: (id: string, updates: any) => ipcRenderer.invoke('db:youtube:channels:update', id, updates),
-        toggleActive: (id: string) => ipcRenderer.invoke('db:youtube:channels:toggleActive', id),
-        delete: (id: string) => ipcRenderer.invoke('db:youtube:channels:delete', id),
-      },
-      videos: {
-        getAll: (limit?: number) => ipcRenderer.invoke('db:youtube:videos:getAll', limit),
-        getByChannel: (channelId: string, limit?: number) => ipcRenderer.invoke('db:youtube:videos:getByChannel', channelId, limit),
-        getById: (id: string) => ipcRenderer.invoke('db:youtube:videos:getById', id),
-        getUnanalyzed: (limit?: number) => ipcRenderer.invoke('db:youtube:videos:getUnanalyzed', limit),
-        getByDateRange: (startDate: string, endDate: string) => ipcRenderer.invoke('db:youtube:videos:getByDateRange', startDate, endDate),
-        getHighValue: (minScore?: number, limit?: number) => ipcRenderer.invoke('db:youtube:videos:getHighValue', minScore, limit),
-        updateAnalysis: (id: string, analysis: any) => ipcRenderer.invoke('db:youtube:videos:updateAnalysis', id, analysis),
-        markAsWatched: (id: string) => ipcRenderer.invoke('db:youtube:videos:markAsWatched', id),
-        delete: (id: string) => ipcRenderer.invoke('db:youtube:videos:delete', id),
-      },
-    },
-    // User Interests Database Operations
-    userInterests: {
-      getAll: () => ipcRenderer.invoke('db:userInterests:getAll'),
-      getByCategory: (category: string) => ipcRenderer.invoke('db:userInterests:getByCategory', category),
-      upsert: (interest: any) => ipcRenderer.invoke('db:userInterests:upsert', interest),
-      delete: (id: string) => ipcRenderer.invoke('db:userInterests:delete', id),
-    },
-    // Data cleanup and privacy operations
-    cleanup: {
-      clearEmailContent: () => ipcRenderer.invoke('db:cleanup:clearEmailContent'),
-      clearWhatsAppMessages: () => ipcRenderer.invoke('db:cleanup:clearWhatsAppMessages'),
-      clearDiscordMessages: () => ipcRenderer.invoke('db:cleanup:clearDiscordMessages'),
-      clearAllChatMessages: () => ipcRenderer.invoke('db:cleanup:clearAllChatMessages'),
-      clearKnowledgeMessages: () => ipcRenderer.invoke('db:cleanup:clearKnowledgeMessages'),
-      clearKnowledgeInsights: () => ipcRenderer.invoke('db:cleanup:clearKnowledgeInsights'),
-      clearConversationSummaries: () => ipcRenderer.invoke('db:cleanup:clearConversationSummaries'),
-      clearAllSensitiveContent: () => ipcRenderer.invoke('db:cleanup:clearAllSensitiveContent'),
-      deleteAccountData: (accountId: string) => ipcRenderer.invoke('db:cleanup:deleteAccountData', accountId),
-      vacuum: () => ipcRenderer.invoke('db:cleanup:vacuum'),
-      getStats: () => ipcRenderer.invoke('db:cleanup:getStats'),
-    },
+  },
+
+  // Invoicing API
+  invoicing: {
+    // Clients
+    getAllClients: () => ipcRenderer.invoke('invoicing:clients:getAll'),
+    getClient: (id: string) => ipcRenderer.invoke('invoicing:clients:getById', id),
+    searchClients: (query: string) => ipcRenderer.invoke('invoicing:clients:search', query),
+    createClient: (client: any) => ipcRenderer.invoke('invoicing:clients:create', client),
+    updateClient: (id: string, updates: any) => ipcRenderer.invoke('invoicing:clients:update', id, updates),
+    deleteClient: (id: string) => ipcRenderer.invoke('invoicing:clients:delete', id),
+    
+    // Invoices
+    getAllInvoices: () => ipcRenderer.invoke('invoicing:invoices:getAll'),
+    getInvoice: (id: string) => ipcRenderer.invoke('invoicing:invoices:getById', id),
+    getInvoicesByStatus: (status: string) => ipcRenderer.invoke('invoicing:invoices:getByStatus', status),
+    getInvoicesByClient: (clientId: string) => ipcRenderer.invoke('invoicing:invoices:getByClient', clientId),
+    getInvoicesByPaymentStatus: (paymentStatus: string) => 
+      ipcRenderer.invoke('invoicing:invoices:getByPaymentStatus', paymentStatus),
+    getOverdueInvoices: () => ipcRenderer.invoke('invoicing:invoices:getOverdue'),
+    getInvoicesDueSoon: (days?: number) => ipcRenderer.invoke('invoicing:invoices:getDueSoon', days || 7),
+    getInvoicesByDateRange: (startDate: string, endDate: string) => 
+      ipcRenderer.invoke('invoicing:invoices:getByDateRange', startDate, endDate),
+    getNextInvoiceNumber: () => ipcRenderer.invoke('invoicing:invoices:getNextNumber'),
+    createInvoice: (invoice: any) => ipcRenderer.invoke('invoicing:invoices:create', invoice),
+    updateInvoice: (id: string, updates: any) => ipcRenderer.invoke('invoicing:invoices:update', id, updates),
+    updateInvoiceStatus: (id: string, status: string) => 
+      ipcRenderer.invoke('invoicing:invoices:updateStatus', id, status),
+    updateInvoicePayment: (id: string, paymentStatus: string, paidAmount: number) => 
+      ipcRenderer.invoke('invoicing:invoices:updatePayment', id, paymentStatus, paidAmount),
+    deleteInvoice: (id: string) => ipcRenderer.invoke('invoicing:invoices:delete', id),
+    
+    // Invoice Items
+    getInvoiceItems: (invoiceId: string) => ipcRenderer.invoke('invoicing:items:getByInvoice', invoiceId),
+    createInvoiceItem: (item: any) => ipcRenderer.invoke('invoicing:items:create', item),
+    updateInvoiceItem: (id: string, updates: any) => ipcRenderer.invoke('invoicing:items:update', id, updates),
+    deleteInvoiceItem: (id: string) => ipcRenderer.invoke('invoicing:items:delete', id),
+    deleteInvoiceItemsByInvoice: (invoiceId: string) => 
+      ipcRenderer.invoke('invoicing:items:deleteByInvoice', invoiceId),
+    
+    // Payments
+    getAllPayments: () => ipcRenderer.invoke('invoicing:payments:getAll'),
+    getPaymentsByInvoice: (invoiceId: string) => ipcRenderer.invoke('invoicing:payments:getByInvoice', invoiceId),
+    getPaymentsByDateRange: (startDate: string, endDate: string) => 
+      ipcRenderer.invoke('invoicing:payments:getByDateRange', startDate, endDate),
+    getTotalPaymentsByInvoice: (invoiceId: string) => 
+      ipcRenderer.invoke('invoicing:payments:getTotalByInvoice', invoiceId),
+    createPayment: (payment: any) => ipcRenderer.invoke('invoicing:payments:create', payment),
+    deletePayment: (id: string) => ipcRenderer.invoke('invoicing:payments:delete', id),
+    
+    // Taxes
+    getAllTaxes: () => ipcRenderer.invoke('invoicing:taxes:getAll'),
+    getTax: (id: string) => ipcRenderer.invoke('invoicing:taxes:getById', id),
+    getDefaultTax: () => ipcRenderer.invoke('invoicing:taxes:getDefault'),
+    createTax: (tax: any) => ipcRenderer.invoke('invoicing:taxes:create', tax),
+    updateTax: (id: string, updates: any) => ipcRenderer.invoke('invoicing:taxes:update', id, updates),
+    deleteTax: (id: string) => ipcRenderer.invoke('invoicing:taxes:delete', id),
+    
+    // Recurring Invoices
+    getAllRecurringInvoices: () => ipcRenderer.invoke('invoicing:recurring:getAll'),
+    getRecurringInvoice: (id: string) => ipcRenderer.invoke('invoicing:recurring:getById', id),
+    getActiveRecurringInvoices: () => ipcRenderer.invoke('invoicing:recurring:getActive'),
+    getRecurringInvoicesDueToday: () => ipcRenderer.invoke('invoicing:recurring:getDueToday'),
+    createRecurringInvoice: (profile: any) => ipcRenderer.invoke('invoicing:recurring:create', profile),
+    updateRecurringInvoice: (id: string, updates: any) => 
+      ipcRenderer.invoke('invoicing:recurring:update', id, updates),
+    updateRecurringInvoiceNextDate: (id: string, nextIssueDate: string) => 
+      ipcRenderer.invoke('invoicing:recurring:updateNextDate', id, nextIssueDate),
+    deleteRecurringInvoice: (id: string) => ipcRenderer.invoke('invoicing:recurring:delete', id),
+    
+    // Invoice Settings
+    getInvoiceSettings: () => ipcRenderer.invoke('invoicing:settings:get'),
+    updateInvoiceSettings: (settings: any) => ipcRenderer.invoke('invoicing:settings:update', settings),
   },
 
   // Event listeners for main process messages
@@ -907,6 +812,74 @@ export interface ElectronAPI {
       upsert: (note: any) => Promise<void>;
       delete: (id: string) => Promise<void>;
     };
+  };
+  invoicing: {
+    // Clients
+    getAllClients: () => Promise<any[]>;
+    getClient: (id: string) => Promise<any>;
+    searchClients: (query: string) => Promise<any[]>;
+    createClient: (client: any) => Promise<boolean>;
+    updateClient: (id: string, updates: any) => Promise<boolean>;
+    deleteClient: (id: string) => Promise<boolean>;
+    
+    // Invoices
+    getAllInvoices: () => Promise<any[]>;
+    getInvoice: (id: string) => Promise<any>;
+    getInvoicesByStatus: (status: string) => Promise<any[]>;
+    getInvoicesByClient: (clientId: string) => Promise<any[]>;
+    getInvoicesByPaymentStatus: (paymentStatus: string) => Promise<any[]>;
+    getOverdueInvoices: () => Promise<any[]>;
+    getInvoicesDueSoon: (days?: number) => Promise<any[]>;
+    getInvoicesByDateRange: (startDate: string, endDate: string) => Promise<any[]>;
+    getNextInvoiceNumber: () => Promise<string>;
+    createInvoice: (invoice: any) => Promise<boolean>;
+    updateInvoice: (id: string, updates: any) => Promise<boolean>;
+    updateInvoiceStatus: (id: string, status: string) => Promise<boolean>;
+    updateInvoicePayment: (id: string, paymentStatus: string, paidAmount: number) => Promise<boolean>;
+    deleteInvoice: (id: string) => Promise<boolean>;
+    
+    // Invoice Items
+    getInvoiceItems: (invoiceId: string) => Promise<any[]>;
+    createInvoiceItem: (item: any) => Promise<boolean>;
+    updateInvoiceItem: (id: string, updates: any) => Promise<boolean>;
+    deleteInvoiceItem: (id: string) => Promise<boolean>;
+    deleteInvoiceItemsByInvoice: (invoiceId: string) => Promise<boolean>;
+    
+    // Payments
+    getAllPayments: () => Promise<any[]>;
+    getPaymentsByInvoice: (invoiceId: string) => Promise<any[]>;
+    getPaymentsByDateRange: (startDate: string, endDate: string) => Promise<any[]>;
+    getTotalPaymentsByInvoice: (invoiceId: string) => Promise<number>;
+    createPayment: (payment: any) => Promise<boolean>;
+    deletePayment: (id: string) => Promise<boolean>;
+    
+    // Taxes
+    getAllTaxes: () => Promise<any[]>;
+    getTax: (id: string) => Promise<any>;
+    getDefaultTax: () => Promise<any>;
+    createTax: (tax: any) => Promise<boolean>;
+    updateTax: (id: string, updates: any) => Promise<boolean>;
+    deleteTax: (id: string) => Promise<boolean>;
+    
+    // Recurring Invoices
+    getAllRecurringInvoices: () => Promise<any[]>;
+    getRecurringInvoice: (id: string) => Promise<any>;
+    getActiveRecurringInvoices: () => Promise<any[]>;
+    getRecurringInvoicesDueToday: () => Promise<any[]>;
+    createRecurringInvoice: (profile: any) => Promise<boolean>;
+    updateRecurringInvoice: (id: string, updates: any) => Promise<boolean>;
+    updateRecurringInvoiceNextDate: (id: string, nextIssueDate: string) => Promise<boolean>;
+    deleteRecurringInvoice: (id: string) => Promise<boolean>;
+    
+    // Invoice Settings
+    getInvoiceSettings: () => Promise<any>;
+    updateInvoiceSettings: (settings: any) => Promise<boolean>;
+    
+    // Reports & Analytics
+    getDashboardStats: () => Promise<any>;
+    getRevenueByPeriod: (startDate: string, endDate: string) => Promise<any[]>;
+    getTaxSummary: (startDate: string, endDate: string) => Promise<any[]>;
+    getClientRevenue: (clientId: string) => Promise<any>;
   };
   on: {
     navigate: (callback: (path: string) => void) => void;

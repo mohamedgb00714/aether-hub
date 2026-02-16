@@ -1057,6 +1057,7 @@ const GeminiModelSelector = () => {
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [freeMode, setFreeMode] = useState(false);
   const [modelFilter, setModelFilter] = useState<'all' | 'free' | 'paid'>('all');
+  const [modelSearch, setModelSearch] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -1113,10 +1114,14 @@ const GeminiModelSelector = () => {
 
   const isOpenRouter = provider === 'openrouter';
   
-  // Filter models based on selection
+  // Filter models based on selection and search
   const filteredOpenRouterModels = openRouterModels.filter(m => {
-    if (modelFilter === 'free') return m.isFree;
-    if (modelFilter === 'paid') return !m.isFree;
+    if (modelFilter === 'free' && !m.isFree) return false;
+    if (modelFilter === 'paid' && m.isFree) return false;
+    if (modelSearch.trim()) {
+      const q = modelSearch.toLowerCase();
+      return (m.name?.toLowerCase().includes(q) || m.id?.toLowerCase().includes(q) || m.description?.toLowerCase().includes(q));
+    }
     return true;
   });
 
@@ -1182,6 +1187,29 @@ const GeminiModelSelector = () => {
         </div>
       )}
 
+      {/* Search bar */}
+      {!freeMode && (
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search models by name or ID..."
+            value={modelSearch}
+            onChange={(e) => setModelSearch(e.target.value)}
+            className="w-full px-4 py-2.5 pl-10 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+          />
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          {modelSearch && (
+            <button onClick={() => setModelSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Loading state */}
       {isLoadingModels && (
         <div className="flex items-center justify-center py-8">
@@ -1225,7 +1253,11 @@ const GeminiModelSelector = () => {
             </button>
           ))
         ) : (
-          GEMINI_MODELS.map((model) => (
+          GEMINI_MODELS.filter((model) => {
+            if (!modelSearch.trim()) return true;
+            const q = modelSearch.toLowerCase();
+            return model.name.toLowerCase().includes(q) || model.id.toLowerCase().includes(q) || model.description?.toLowerCase().includes(q);
+          }).map((model) => (
             <button
               key={model.id}
               onClick={() => handleModelChange(model.id)}
