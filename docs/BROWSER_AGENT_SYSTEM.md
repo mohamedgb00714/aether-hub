@@ -1176,16 +1176,712 @@ For users with existing automations:
 
 ---
 
+---
+
+## 💡 Copilot Suggestions — What I'd Add
+
+Based on deep analysis of the existing aethermsaid hub codebase, here are my opinionated suggestions on what would make this system significantly more powerful, unique, and practical.
+
+---
+
+### S1. **Leverage Existing Hub Services as Agent Superpowers**
+
+The current codebase already has a gold mine of services. Instead of the agent being a standalone browser bot, it should be a **first-class citizen** that can tap into everything the hub already does:
+
+```
+Agent Context = Browser Control + Hub Knowledge
+
+┌─────────────────────────────────────────────────────────┐
+│  Browser Agent                                          │
+│                                                         │
+│  Can READ from:                   Can WRITE to:         │
+│  • Emails (Gmail/Outlook)         • Send emails (Resend)│
+│  • Calendar events                • WhatsApp messages   │
+│  • GitHub notifications           • Telegram messages   │
+│  • WhatsApp chats                 • Discord messages    │
+│  • Discord messages               • Notes              │
+│  • Telegram messages              • Knowledge Base     │
+│  • Knowledge Base                 • Watch items        │
+│  • Intelligence Feed              • Calendar events    │
+│  • YouTube summaries              • GitHub actions     │
+│  • Watch items & actions          • Activity logs      │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Why**: Right now automations are isolated — they run browser-use and return text. The agent should be able to say: *"I found a cheap flight on kayak.com, should I send it to the family WhatsApp group and add a calendar event?"* — and actually do it.
+
+**Implementation**: Inject hub service access into the agent's tool belt:
+```typescript
+// Agent has access to hub services as tools
+const agentTools = [
+  // Browser tools (browser-use)
+  browseTool, clickTool, typeTool, screenshotTool,
+  
+  // Hub tools (existing services!)
+  sendWhatsAppMessage,   // from whatsapp.ts
+  sendTelegramMessage,   // from telegram.ts
+  sendEmail,             // from resendConnector
+  createCalendarEvent,   // from calendar service
+  searchKnowledgeBase,   // from knowledgeExtractor
+  getRecentEmails,       // from database
+  getIntelligenceFeed,   // from intelligenceFeed
+  createNote,            // from notes
+  addWatchItem,          // from watchService
+]
+```
+
+---
+
+### S2. **Agent "Contexts" Instead of Just Website Configs**
+
+Website configs are good but too rigid. Replace with **Contexts** — dynamic profiles the agent switches between automatically based on what it's doing:
+
+```typescript
+interface AgentContext {
+  id: string
+  name: string
+  
+  // Trigger: when should this context activate?
+  triggers: {
+    domains?: string[]          // ["linkedin.com", "indeed.com"]
+    keywords?: string[]         // ["job", "hiring", "resume"]
+    timeWindows?: TimeWindow[]  // 9am-5pm weekdays
+    manualOnly?: boolean        // Only when user says "switch to X"
+  }
+  
+  // What changes in this context
+  personality: Partial<AgentPersonality>
+  systemPrompt: string
+  availableTools: string[]      // Limit tools in this context
+  memoryNamespace: string       // Separate memories per context
+  
+  // Guardrails
+  constraints: {
+    maxSpend?: number           // Money limit for purchases
+    requireConfirmation?: string[]  // Actions needing approval
+    blockedActions?: string[]   // Never do these
+    timeLimit?: number          // Max minutes in this context
+  }
+}
+```
+
+**Example Contexts:**
+```json
+[
+  {
+    "name": "Job Hunter",
+    "triggers": { "domains": ["linkedin.com", "indeed.com", "glassdoor.com"] },
+    "personality": { "style": "professional" },
+    "constraints": { "requireConfirmation": ["apply_job", "send_message"] }
+  },
+  {
+    "name": "Deal Finder",
+    "triggers": { "domains": ["amazon.com", "ebay.com"], "keywords": ["price drop"] },
+    "personality": { "style": "analytical" },
+    "constraints": { "maxSpend": 50, "requireConfirmation": ["purchase"] }
+  },
+  {
+    "name": "Night Mode",
+    "triggers": { "timeWindows": [{ "start": "22:00", "end": "06:00" }] },
+    "personality": { "style": "minimal" },
+    "constraints": { "blockedActions": ["send_message", "post_content"] }
+  }
+]
+```
+
+---
+
+### S3. **Confirmation Gateway via Telegram**
+
+Critical for trust. Before the agent takes **high-stakes actions**, ask the user via Telegram:
+
+```
+🤖 Agent: Deal Finder
+
+Found a price drop on Amazon:
+📦 Sony WH-1000XM5 Headphones
+💰 $248 → $179 (28% off!)
+⏰ Lightning deal - 2h remaining
+
+Options:
+[✅ Buy Now] [🛒 Add to Cart] [⏸️ Remind Later] [❌ Skip]
+```
+
+```typescript
+interface ConfirmationRequest {
+  agentId: string
+  action: string
+  context: {
+    description: string
+    urgency: 'low' | 'medium' | 'high'
+    timeout: number        // Auto-decline after X minutes
+    defaultAction: string  // What to do if no response
+  }
+  options: {
+    label: string
+    emoji: string
+    action: string         // callback action
+  }[]
+}
+```
+
+**Auto-approve rules**: Users can set rules like "auto-approve purchases under $20" or "auto-approve all LinkedIn connection requests" to reduce notification fatigue.
+
+---
+
+### S4. **Agent Observation Mode (Screen Watcher)**
+
+Before the agent acts, let it **observe** first. A mode where the agent watches the browser passively and learns:
+
+```
+┌─ Observation Mode ──────────────────────────────┐
+│                                                   │
+│  Agent is watching: twitter.com                   │
+│  Duration: 45 minutes                            │
+│                                                   │
+│  Learned:                                        │
+│  • Feed refreshes every 30s                      │
+│  • Notification bell at top-right                │
+│  • Your engagement pattern: like > retweet       │
+│  • Peak activity: 9-11am, 7-9pm                  │
+│  • Most interacted accounts: @user1, @user2      │
+│                                                   │
+│  Suggested Actions:                              │
+│  • Auto-like posts from top 5 contacts           │
+│  • Schedule posts during peak hours              │
+│  • Mute notification sound during work hours     │
+│                                                   │
+│  [Accept Suggestions] [Modify] [Keep Watching]   │
+└───────────────────────────────────────────────────┘
+```
+
+**How it works**: 
+1. Agent takes periodic screenshots + DOM snapshots
+2. AI analyzes patterns over time 
+3. Generates suggested automations
+4. User approves → becomes scheduled tasks
+
+---
+
+### S5. **"Recipes" — Sharable Multi-Step Workflows**
+
+Instead of single tasks, support **Recipes** — complex workflows that chain multiple steps with conditions:
+
+```yaml
+recipe: "Morning Briefing"
+description: "Check all important sites and send summary to Telegram"
+steps:
+  - name: Check Email
+    action: browse
+    url: https://mail.google.com
+    extract: "unread count and top 5 subject lines"
+    save_as: email_summary
+    
+  - name: Check Calendar
+    action: hub_service
+    service: getCalendarEvents
+    params: { today: true }
+    save_as: todays_events
+    
+  - name: Check GitHub
+    action: browse
+    url: https://github.com/notifications
+    extract: "new notifications and PR reviews needed"
+    save_as: github_summary
+    
+  - name: Check News
+    action: browse
+    url: https://news.ycombinator.com
+    extract: "top 5 stories relevant to my interests"
+    save_as: news_summary
+    
+  - name: Generate Briefing
+    action: ai_generate
+    prompt: |
+      Create a concise morning briefing from:
+      Emails: {{email_summary}}
+      Calendar: {{todays_events}}
+      GitHub: {{github_summary}}
+      News: {{news_summary}}
+    save_as: briefing
+    
+  - name: Send via Telegram
+    action: telegram_send
+    message: "☀️ Morning Briefing\n\n{{briefing}}"
+    
+  - name: Speak Briefing (optional)
+    action: tts
+    text: "{{briefing}}"
+    condition: "settings.voiceBriefing == true"
+```
+
+**This leverages**: existing services (TTS via ElevenLabs/Google, Telegram, hub data), and is human-readable/editable.
+
+---
+
+### S6. **Agent Dashboard Widget on Main Dashboard**
+
+Add a live agent status widget to the existing Dashboard page:
+
+```
+┌─ Active Agents ─────────────────────────────────┐
+│                                                   │
+│  🤖 Work Assistant      ● Running   ⏱️ 4h 23m  │
+│     └ Currently: Monitoring LinkedIn inbox       │
+│                                                   │
+│  🛒 Deal Finder         ● Watching  ⏱️ 12h 5m  │
+│     └ Tracking: 8 products on 3 sites            │
+│                                                   │
+│  📰 News Researcher     ● Idle      ⏱️ --       │
+│     └ Next run: 9:00 AM (Morning Briefing)       │
+│                                                   │
+│  Tasks Today: 23 completed • 2 failed • 5 queued │
+│  [View All Agents →]                             │
+└───────────────────────────────────────────────────┘
+```
+
+---
+
+### S7. **Session Recording & Replay (Debug + Learn)**
+
+Record every agent session as a replayable timeline:
+
+```typescript
+interface AgentSession {
+  id: string
+  agentId: string
+  taskId: string
+  
+  // Timeline of actions
+  events: SessionEvent[]
+  
+  // Snapshots at key moments
+  snapshots: {
+    timestamp: number
+    screenshot: string    // base64
+    dom: string           // serialized DOM
+    url: string
+    action: string        // What the agent did
+    reasoning: string     // Why the agent did it (from AI)
+  }[]
+}
+```
+
+**UI**: A timeline scrubber like a video player — slide through agent's actions with screenshots, see what it was "thinking" at each step. Invaluable for debugging and for building trust.
+
+---
+
+### S8. **Voice Control via Existing Mic Overlay**
+
+The codebase already has `mic-overlay.ts`, `speechToTextService.ts`, and `elevenLabsService.ts`. Connect them!
+
+```
+User (via mic): "Hey, tell my shopping agent to find the cheapest 
+                 Nintendo Switch on Amazon and eBay"
+
+System:
+1. STT converts voice → text
+2. AI parses intent → { agent: "Deal Finder", action: "compare prices", 
+                        item: "Nintendo Switch", sites: ["amazon", "ebay"] }
+3. Routes to Deal Finder agent
+4. Agent executes
+5. TTS reads result back: "Found it! Amazon has it for $279, 
+                           eBay has a refurbished one for $229"
+6. Telegram notification sent with links
+```
+
+---
+
+### S9. **Anti-Detection & Stealth Mode**
+
+This is critical for long-running browser agents. Websites detect automation and ban accounts.
+
+```typescript
+interface StealthConfig {
+  // Human-like behavior
+  humanDelay: {
+    minMs: number         // Min delay between actions (800ms)
+    maxMs: number         // Max delay (3000ms)
+    typingSpeed: number   // Characters per minute (200-400)
+    scrollBehavior: 'smooth' | 'human'  // Natural scrolling
+  }
+  
+  // Browser fingerprint
+  fingerprint: {
+    rotateUserAgent: boolean
+    spoofWebGL: boolean
+    spoofCanvas: boolean
+    spoofTimezone: boolean
+    languages: string[]
+  }
+  
+  // Session management
+  session: {
+    maxDurationMinutes: number  // Take breaks
+    breakDurationMinutes: number
+    randomizeSchedule: boolean  // Don't be too predictable
+  }
+  
+  // Safety
+  safety: {
+    stopOnCaptcha: boolean      // Pause and notify user
+    stopOnLoginPrompt: boolean  // Don't auto-fill credentials
+    maxActionsPerHour: number   // Hard rate limit
+  }
+}
+```
+
+---
+
+### S10. **Agent Event Bus — Hub-Wide Intelligence**
+
+Create an event bus where agents can react to events from anywhere in the hub:
+
+```typescript
+// Events from all hub services
+type HubEvent = 
+  | { type: 'email:received', data: Email }
+  | { type: 'calendar:event_starting', data: CalendarEvent }
+  | { type: 'whatsapp:message', data: WhatsAppMessage }
+  | { type: 'telegram:message', data: TelegramMessage }
+  | { type: 'github:notification', data: GitHubNotification }
+  | { type: 'discord:message', data: DiscordMessage }
+  | { type: 'watch:item_triggered', data: WatchItem }
+  | { type: 'price:drop_detected', data: PriceAlert }
+  | { type: 'agent:task_completed', data: TaskResult }
+
+// Agent subscribes to events
+const agentEventConfig = {
+  triggers: [
+    {
+      event: 'email:received',
+      condition: 'data.from.includes("boss@company.com")',
+      action: 'Immediately read and summarize, send to Telegram'
+    },
+    {
+      event: 'calendar:event_starting',
+      condition: 'data.minutesUntil <= 5',
+      action: 'Open meeting link in browser, prepare notes'
+    },
+    {
+      event: 'watch:item_triggered',
+      condition: 'data.platform === "github"',
+      action: 'Check PR, run review, post comment if straightforward'
+    }
+  ]
+}
+```
+
+**This is the killer feature**: The agent doesn't just do browser tasks — it **reacts to your entire digital life** and takes intelligent action.
+
+---
+
+### S11. **Cost Tracking & Token Budget**
+
+AI API calls cost money. Track every token:
+
+```
+┌─ Agent Costs (This Month) ──────────────────────┐
+│                                                   │
+│  Total: $4.23                                    │
+│                                                   │
+│  By Agent:                                       │
+│  • Work Assistant:    $2.10 (1.2M tokens)        │
+│  • Deal Finder:       $0.85 (490K tokens)        │
+│  • News Researcher:   $1.28 (740K tokens)        │
+│                                                   │
+│  Budget: $10/month                               │
+│  ██████████░░░░░░░░░░  42% used                  │
+│                                                   │
+│  Auto-pause agents when budget exceeded: [✓]     │
+└───────────────────────────────────────────────────┘
+```
+
+```typescript
+interface TokenBudget {
+  monthlyLimitUSD: number
+  perAgentLimitUSD?: Record<string, number>
+  alertThreshold: number  // Notify at 80%
+  autoStop: boolean       // Stop agents when budget hit
+  preferCheapModel: boolean  // Switch to Flash when budget low
+}
+```
+
+---
+
+### S12. **Agent Marketplace / Template Store**
+
+Allow importing/exporting complete agent configurations:
+
+```json
+{
+  "template": {
+    "name": "LinkedIn Networking Pro",
+    "version": "1.2.0",
+    "author": "community",
+    "description": "Automated LinkedIn engagement agent",
+    "agent": { /* full config */ },
+    "contexts": [ /* website configs */ ],
+    "recipes": [ /* workflows */ ],
+    "skills": [ /* custom skills */ ],
+    "requiredCapabilities": ["browser-use", "telegram"]
+  }
+}
+```
+
+Users can:
+- Export their agent as a `.aether-agent.json` file
+- Import from file or URL
+- Rate and review community templates
+- Fork and customize
+
+---
+
+### S13. **Persistent Browser Tabs as "Workspaces"**
+
+Instead of opening/closing browsers per task, maintain persistent tabs:
+
+```typescript
+interface AgentWorkspace {
+  id: string
+  agentId: string
+  tabs: {
+    id: string
+    url: string
+    purpose: string       // "LinkedIn inbox monitoring"
+    refreshInterval?: number  // Auto-refresh every X seconds
+    persistent: boolean   // Keep open between tasks
+    lastInteraction: string
+  }[]
+  layout: 'single' | 'split' | 'grid'  // Tab arrangement
+}
+```
+
+**The browser stays open 24/7** with pinned tabs, just like a real person would. The agent switches between tabs to do different tasks, maintains login sessions, and monitors for changes.
+
+---
+
+### S14. **Natural Language Cron via Telegram**
+
+Instead of users learning cron syntax, let them just text their bot:
+
+```
+User: "Check Amazon every 2 hours for Switch deals under $250"
+
+Bot: Got it! I'll create a recurring task:
+     📋 Task: Monitor Amazon for Nintendo Switch < $250
+     ⏰ Schedule: Every 2 hours (0 */2 * * *)
+     🔔 Alert: Telegram notification when found
+     
+     [✅ Confirm] [✏️ Edit] [❌ Cancel]
+```
+
+The AI parses natural language into structured task + cron expression. Users never need to know cron syntax.
+
+---
+
+### S15. **Integration with Existing Watch System**
+
+The hub already has a Watch system (`watchService.ts`, `watchMonitor.ts`). Connect it:
+
+```
+Watch Item Triggered → Agent Takes Action
+
+Example:
+Watch: "GitHub PR needs review" (from watchService)
+  → Agent opens PR in browser
+  → Reads the diff
+  → Generates review comments
+  → Posts review via browser
+  → Sends summary to Telegram
+  → Marks watch item as actioned
+```
+
+The Watch system becomes the **trigger** and the Browser Agent becomes the **executor**. This turns passive watching into active automation.
+
+---
+
+### Summary: Priority Ranking
+
+| # | Suggestion | Impact | Effort | Priority |
+|---|-----------|--------|--------|----------|
+| S1 | Hub Services as Agent Tools | 🔥🔥🔥 | Medium | **P0** |
+| S3 | Confirmation Gateway (Telegram) | 🔥🔥🔥 | Low | **P0** |
+| S10 | Event Bus | 🔥🔥🔥 | Medium | **P0** |
+| S15 | Watch System Integration | 🔥🔥🔥 | Low | **P0** |
+| S5 | Recipes (Multi-Step Workflows) | 🔥🔥🔥 | Medium | **P1** |
+| S14 | Natural Language Cron | 🔥🔥 | Low | **P1** |
+| S2 | Contexts (Dynamic Profiles) | 🔥🔥 | Medium | **P1** |
+| S6 | Dashboard Widget | 🔥🔥 | Low | **P1** |
+| S11 | Cost Tracking | 🔥🔥 | Low | **P1** |
+| S7 | Session Recording | 🔥🔥 | High | **P2** |
+| S9 | Anti-Detection | 🔥🔥 | Medium | **P2** |
+| S13 | Persistent Tabs | 🔥🔥 | Medium | **P2** |
+| S4 | Observation Mode | 🔥 | High | **P2** |
+| S8 | Voice Control | 🔥 | Medium | **P3** |
+| S12 | Marketplace | 🔥 | High | **P3** |
+
+**Start with P0** — they're the highest leverage and one of them (S15) requires almost no new code since the Watch system already exists.
+
+---
+
+## SOLID Design Principles
+
+This architecture is designed to be SOLID-first from day one. Each module is structured to be testable, replaceable, and extendable without touching core logic.
+
+### 1) Single Responsibility Principle (SRP)
+
+Each class has one reason to change.
+
+**Examples:**
+- `BrowserAgent`: Executes tasks and manages browser session only.
+- `AgentManager`: Lifecycle + orchestration only.
+- `TelegramBotController`: Communication + command parsing only.
+- `AgentScheduler`: Cron and task timing only.
+- `AgentMemoryService`: Read/write memories only.
+- `AgentEventBus`: Publish/subscribe events only.
+
+### 2) Open/Closed Principle (OCP)
+
+New features should be added by extension, not modification.
+
+**Examples:**
+- Add new skills by registering to `SkillRegistry` (no core changes).
+- Add new AI providers via `LLMProvider` interface.
+- Add new event triggers via `EventRule` configuration.
+
+```typescript
+interface SkillRegistry {
+  register(skill: AgentSkill): void
+  get(id: string): AgentSkill | undefined
+  list(): AgentSkill[]
+}
+
+interface LLMProvider {
+  id: string
+  generate(prompt: string, config: LLMConfig): Promise<LLMResult>
+}
+```
+
+### 3) Liskov Substitution Principle (LSP)
+
+Any subclass or implementation must be safely substitutable.
+
+**Examples:**
+- `TelegramBotController` can be replaced with `DiscordBotController` without breaking `AgentNotificationService`.
+- `BrowserUseRunner` can be replaced with `PlaywrightRunner` as long as both implement `BrowserRunner`.
+
+```typescript
+interface BrowserRunner {
+  run(task: AgentTask, context: AgentContext): Promise<AgentRunResult>
+}
+```
+
+### 4) Interface Segregation Principle (ISP)
+
+Avoid fat interfaces. Consumers only depend on what they use.
+
+**Examples:**
+- `IEventPublisher` and `IEventSubscriber` are separate.
+- `IAgentStorage` split into `IAgentConfigStore`, `IAgentTaskStore`, `IAgentMemoryStore`.
+
+```typescript
+interface IEventPublisher {
+  publish(event: HubEvent): void
+}
+
+interface IEventSubscriber {
+  subscribe(topic: string, handler: (event: HubEvent) => void): void
+}
+```
+
+### 5) Dependency Inversion Principle (DIP)
+
+High-level modules depend on abstractions, not concrete implementations.
+
+**Examples:**
+- `BrowserAgent` depends on `BrowserRunner`, not browser-use directly.
+- `AgentManager` depends on `AgentRepository` interface, not SQLite.
+- `AgentAIService` depends on `LLMProvider` interface, not Gemini/OpenAI directly.
+
+```typescript
+class BrowserAgent {
+  constructor(
+    private runner: BrowserRunner,
+    private memory: AgentMemoryStore,
+    private eventBus: IEventPublisher
+  ) {}
+}
+```
+
+### SOLID-Friendly Module Map
+
+```
+electron/agents/
+├── core/
+│   ├── BrowserAgent.ts          // SRP: execution only
+│   ├── AgentManager.ts          // SRP: lifecycle only
+│   └── AgentContextResolver.ts  // SRP: context selection only
+│
+├── scheduling/
+│   ├── AgentScheduler.ts        // SRP: timing only
+│   └── CronParser.ts            // SRP: schedule parsing
+│
+├── skills/
+│   ├── SkillRegistry.ts         // OCP: add skills without modifying core
+│   ├── BuiltInSkills.ts
+│   └── CustomSkillLoader.ts
+│
+├── comms/
+│   ├── TelegramBotController.ts // SRP: Telegram only
+│   ├── NotificationService.ts   // SRP: alerts only
+│   └── ConfirmationGateway.ts
+│
+├── memory/
+│   ├── AgentMemoryService.ts
+│   └── MemoryRanker.ts
+│
+├── ai/
+│   ├── AgentPromptBuilder.ts
+│   ├── LLMProvider.ts           // DIP: abstraction
+│   ├── GeminiProvider.ts
+│   └── OpenRouterProvider.ts
+│
+├── event-bus/
+│   ├── EventBus.ts              // ISP: publisher/subscriber split
+│   ├── EventRules.ts
+│   └── EventRouter.ts
+│
+└── storage/
+    ├── AgentRepository.ts       // DIP: abstract repository
+    ├── SqliteAgentRepository.ts
+    └── InMemoryAgentRepository.ts
+```
+
+### Testing Benefits (Immediate ROI)
+
+- Swap `SqliteAgentRepository` with `InMemoryAgentRepository` for unit tests.
+- Mock `BrowserRunner` to test agent logic without a real browser.
+- Mock `LLMProvider` to test prompt flows without API calls.
+- Use `FakeEventBus` to simulate triggers.
+
+---
+
 ## Conclusion
 
 This Browser Agent System transforms aethermsaid hub from a simple automation tool into a powerful, autonomous assistant platform. With persistent browser sessions, Telegram integration, adaptive personalities, and extensible skills, agents can handle complex, long-running tasks while you focus on what matters.
 
 **Key Differentiators:**
 - ✅ True 24/7 persistence (browser always open)
-- ✅ Remote control via Telegram
-- ✅ Adaptive personality per website
+- ✅ Remote control via Telegram (one bot per person)
+- ✅ Adaptive personality per website (Contexts system)
 - ✅ Learning from experience (memory system)
 - ✅ Extensible skills framework
 - ✅ Built on proven browser-use technology
+- ✅ Deep integration with ALL hub services (emails, calendar, WhatsApp, Discord, etc.)
+- ✅ Event-driven reactions to your entire digital life
+- ✅ Human-in-the-loop via Telegram confirmation gateway
+- ✅ Sharable Recipes for complex multi-step workflows
+- ✅ Cost-aware with token budget management
 
 Ready to build the future of browser automation! 🚀
