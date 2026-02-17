@@ -220,6 +220,15 @@ pnpm run package:mac     # .dmg (Intel + Apple Silicon)
 pnpm run package:win     # .exe installer
 ```
 
+## 📚 Documentation
+
+Comprehensive guides for key features:
+
+- **[AI Providers Guide](docs/AI_PROVIDERS.md)** — Configure Gemini, OpenRouter, OpenAI, Anthropic, Ollama, or Local AI
+- **[Browser Automation with OpenRouter](docs/BROWSER_USE_OPENROUTER_GUIDE.md)** — Complete guide to using browser-use with OpenRouter for AI-powered browser automation
+- **[Contributing Guide](CONTRIBUTING.md)** — How to contribute to the project
+- **[Security Policy](SECURITY.md)** — How to report vulnerabilities
+
 ## 🏗️ Architecture
 
 ```
