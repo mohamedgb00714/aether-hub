@@ -53,16 +53,16 @@ import { AgentScheduler } from './agents/scheduling/AgentScheduler.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const telegramAuthCodes = new TelegramAuthCodeService();
-const agentManager = createAgentManager(telegramAuthCodes);
-const agentScheduler = new AgentScheduler(agentManager);
-
 // Initialize secure store with encryption
 // Note: safeStorage is used via getEncryptionKey()
 const store = new Store({
   encryptionKey: getEncryptionKey(),
   name: 'aether-hub-config'
 });
+
+const telegramAuthCodes = new TelegramAuthCodeService();
+const agentManager = createAgentManager(store, telegramAuthCodes);
+const agentScheduler = new AgentScheduler(agentManager);
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -1629,7 +1629,7 @@ ipcMain.handle('db:accounts:delete', (_event, id: string) => {
 ipcMain.handle('db:accounts:deleteNullIds', () => {
   try {
     const count = database.accounts.deleteNullIds();
-    console.log(`🗑️ MAIN: Deleted ${count} accounts with null IDs`);
+   // console.log(`🗑️ MAIN: Deleted ${count} accounts with null IDs`);
     return count;
   } catch (error) {
     console.error('❌ MAIN: db:accounts:deleteNullIds failed:', error);

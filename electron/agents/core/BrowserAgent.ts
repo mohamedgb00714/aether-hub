@@ -1,3 +1,4 @@
+import type Store from 'electron-store';
 import { v4 as uuidv4 } from 'uuid';
 import type { AgentConfig, AgentStatus, AgentTaskResult, HubEvent } from '../types.js';
 import type { BrowserRunner } from '../runners/BrowserRunner.js';
@@ -18,6 +19,7 @@ export class BrowserAgent {
     private config: AgentConfig,
     private runner: BrowserRunner,
     private eventBus: EventBus,
+    private store: Store,
     private onConfigUpdate?: (updates: Partial<AgentConfig>) => Promise<void>,
     private validateTelegramCode?: (code: string) => string | null
   ) {}
@@ -55,7 +57,7 @@ export class BrowserAgent {
         }
       });
       this.confirmation = new ConfirmationGateway(this.bot);
-      this.langchain = new TelegramLangChainAgent(this.config, this.runner);
+      this.langchain = new TelegramLangChainAgent(this.config, this.runner, this.store);
       this.bot.onCallback((chatId, data, callbackId) => {
         if (this.confirmation?.handleCallback(chatId, data, callbackId)) return;
       });

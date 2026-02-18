@@ -2,8 +2,7 @@ import { exec, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { app } from 'electron';
-import Store from 'electron-store';
-import { getEncryptionKey } from '../../security.js';
+import type Store from 'electron-store';
 import type { AgentConfig, AgentTaskResult } from '../types.js';
 import type { BrowserRunner } from './BrowserRunner.js';
 
@@ -14,11 +13,9 @@ interface LlmConfig {
 }
 
 export class BrowserUseRunner implements BrowserRunner {
-  private store = new Store({
-    name: 'aether-hub-config',
-    encryptionKey: getEncryptionKey()
-  });
   private persistentSessions = new Map<string, { process: ChildProcess; scriptPath: string }>();
+
+  constructor(private store: Store) {}
 
   async run(task: string, config: AgentConfig): Promise<AgentTaskResult> {
     const llm = this.getLlmConfig();

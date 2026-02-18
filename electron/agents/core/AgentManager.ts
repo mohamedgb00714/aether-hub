@@ -1,3 +1,4 @@
+import type Store from 'electron-store';
 import { v4 as uuidv4 } from 'uuid';
 import type { AgentConfig, AgentStatus, AgentSummary, HubEvent } from '../types.js';
 import type { AgentRepository } from '../storage/AgentRepository.js';
@@ -13,6 +14,7 @@ export class AgentManager {
     private repository: AgentRepository,
     private runner: BrowserRunner,
     private eventBus: EventBus,
+    private store: Store,
     private validateTelegramCode?: (code: string) => string | null
   ) {
     this.eventBus.subscribe('*', event => this.handleEvent(event));
@@ -108,6 +110,7 @@ export class AgentManager {
       config,
       this.runner,
       this.eventBus,
+      this.store,
       async updates => this.repository.update(config.id, updates),
       this.validateTelegramCode
     );

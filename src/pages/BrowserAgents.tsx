@@ -30,7 +30,18 @@ const defaultForm = {
   telegramBotToken: '',
   telegramChatIds: '',
   telegramAutoAuthorize: true,
-  headless: false
+  headless: false,
+  // Personality
+  personalityStyle: 'professional' as 'professional' | 'casual' | 'technical' | 'creative' | 'friendly' | 'custom',
+  personalityTone: 'Helpful, concise, and accurate',
+  personalityLanguage: 'the same language as the user',
+  personalityResponseLength: 'concise' as 'concise' | 'balanced' | 'detailed',
+  personalityUseEmoji: true,
+  personalityGoals: '',
+  personalityConstraints: '',
+  personalityGreeting: '',
+  personalitySystemPrompt: '',
+  personalityCustomInstructions: ''
 };
 
 const buildDefaultConfig = (form: typeof defaultForm) => ({
@@ -44,11 +55,16 @@ const buildDefaultConfig = (form: typeof defaultForm) => ({
   telegramUsername: undefined,
   telegramAutoAuthorize: form.telegramAutoAuthorize,
   personality: {
-    style: 'professional',
-    tone: 'Helpful, concise, and accurate',
-    goals: [],
-    constraints: [],
-    customInstructions: ''
+    style: form.personalityStyle,
+    tone: form.personalityTone || 'Helpful, concise, and accurate',
+    language: form.personalityLanguage || 'the same language as the user',
+    responseLength: form.personalityResponseLength,
+    useEmoji: form.personalityUseEmoji,
+    goals: form.personalityGoals ? form.personalityGoals.split('\n').map(s => s.trim()).filter(Boolean) : [],
+    constraints: form.personalityConstraints ? form.personalityConstraints.split('\n').map(s => s.trim()).filter(Boolean) : [],
+    greeting: form.personalityGreeting,
+    systemPrompt: form.personalitySystemPrompt,
+    customInstructions: form.personalityCustomInstructions
   },
   browser: {
     headless: form.headless,
@@ -129,6 +145,7 @@ export default function BrowserAgentsPage() {
     setAuthorizedIds([]);
     try {
       const config = await window.electronAPI.agent?.getById(agent.id);
+      const p = config?.personality;
       setForm({
         name: config?.name || agent.name,
         description: config?.description || agent.description || '',
@@ -136,7 +153,17 @@ export default function BrowserAgentsPage() {
         telegramBotToken: '',
         telegramChatIds: '',
         telegramAutoAuthorize: config?.telegramAutoAuthorize ?? true,
-        headless: config?.browser?.headless ?? false
+        headless: config?.browser?.headless ?? false,
+        personalityStyle: p?.style || 'professional',
+        personalityTone: p?.tone || 'Helpful, concise, and accurate',
+        personalityLanguage: p?.language || 'the same language as the user',
+        personalityResponseLength: p?.responseLength || 'concise',
+        personalityUseEmoji: p?.useEmoji ?? true,
+        personalityGoals: (p?.goals || []).join('\n'),
+        personalityConstraints: (p?.constraints || []).join('\n'),
+        personalityGreeting: p?.greeting || '',
+        personalitySystemPrompt: p?.systemPrompt || '',
+        personalityCustomInstructions: p?.customInstructions || ''
       });
       // Fetch live authorized chat IDs from running agent
       const ids = await window.electronAPI.agent?.getAuthorizedChatIds(agent.id);
@@ -150,7 +177,17 @@ export default function BrowserAgentsPage() {
         telegramBotToken: '',
         telegramChatIds: '',
         telegramAutoAuthorize: true,
-        headless: false
+        headless: false,
+        personalityStyle: 'professional',
+        personalityTone: 'Helpful, concise, and accurate',
+        personalityLanguage: 'the same language as the user',
+        personalityResponseLength: 'concise',
+        personalityUseEmoji: true,
+        personalityGoals: '',
+        personalityConstraints: '',
+        personalityGreeting: '',
+        personalitySystemPrompt: '',
+        personalityCustomInstructions: ''
       });
     }
   };
@@ -183,11 +220,16 @@ export default function BrowserAgentsPage() {
   };
 
   const handleStart = async (id: string) => {
-    await window.electronAPI.agent?.start(id);
+    const result = await window.electronAPI.agent?.start(id);
+    if (!result?.success) {
+      console.error('Failed to start agent:', result?.error);
+    }
+    await loadData();
   };
 
   const handleStop = async (id: string) => {
     await window.electronAPI.agent?.stop(id);
+    await loadData();
   };
 
   const handleDelete = async (id: string) => {
@@ -291,6 +333,131 @@ export default function BrowserAgentsPage() {
               className="h-4 w-4 rounded border-slate-300 text-indigo-600"
             />
             <span>Run headless (hide browser window)</span>
+          </div>
+
+          {/* Personality Settings */}
+          <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 space-y-4">
+            <p className="text-xs font-bold text-violet-700">🧠 Agent Personality</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-violet-600">Style</label>
+                <select
+                  value={form.personalityStyle}
+                  onChange={e => setForm(prev => ({ ...prev, personalityStyle: e.target.value as any }))}
+                  className="w-full px-2 py-1.5 border border-violet-200 rounded-lg text-xs bg-white"
+                >
+                  <option value="professional">Professional</option>
+                  <option value="casual">Casual</option>
+                  <option value="technical">Technical</option>
+                  <option value="creative">Creative</option>
+                  <option value="friendly">Friendly</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-violet-600">Response Length</label>
+                <select
+                  value={form.personalityResponseLength}
+                  onChange={e => setForm(prev => ({ ...prev, personalityResponseLength: e.target.value as any }))}
+                  className="w-full px-2 py-1.5 border border-violet-200 rounded-lg text-xs bg-white"
+                >
+                  <option value="concise">Concise (1-3 sentences)</option>
+                  <option value="balanced">Balanced (2-5 sentences)</option>
+                  <option value="detailed">Detailed (comprehensive)</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-violet-600">Language</label>
+                <input
+                  value={form.personalityLanguage}
+                  onChange={e => setForm(prev => ({ ...prev, personalityLanguage: e.target.value }))}
+                  placeholder="the same language as the user"
+                  className="w-full px-2 py-1.5 border border-violet-200 rounded-lg text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-violet-600">Tone</label>
+                <input
+                  value={form.personalityTone}
+                  onChange={e => setForm(prev => ({ ...prev, personalityTone: e.target.value }))}
+                  placeholder="Helpful, concise, and accurate"
+                  className="w-full px-2 py-1.5 border border-violet-200 rounded-lg text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-violet-600">Greeting Message</label>
+                <input
+                  value={form.personalityGreeting}
+                  onChange={e => setForm(prev => ({ ...prev, personalityGreeting: e.target.value }))}
+                  placeholder={`Hello! I'm ${form.name || 'your agent'}. How can I help?`}
+                  className="w-full px-2 py-1.5 border border-violet-200 rounded-lg text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-violet-700">
+              <input
+                type="checkbox"
+                checked={form.personalityUseEmoji}
+                onChange={e => setForm(prev => ({ ...prev, personalityUseEmoji: e.target.checked }))}
+                className="h-3.5 w-3.5 rounded border-violet-300 text-violet-600"
+              />
+              <span>Use emoji in responses</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-violet-600">Goals (one per line)</label>
+                <textarea
+                  value={form.personalityGoals}
+                  onChange={e => setForm(prev => ({ ...prev, personalityGoals: e.target.value }))}
+                  placeholder={"Help user with work tasks\nBe proactive with suggestions\nAsk for confirmation before actions"}
+                  rows={3}
+                  className="w-full px-2 py-1.5 border border-violet-200 rounded-lg text-xs resize-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-violet-600">Constraints (one per line)</label>
+                <textarea
+                  value={form.personalityConstraints}
+                  onChange={e => setForm(prev => ({ ...prev, personalityConstraints: e.target.value }))}
+                  placeholder={"Never share sensitive information\nDon't make purchases without asking\nAvoid adult content"}
+                  rows={3}
+                  className="w-full px-2 py-1.5 border border-violet-200 rounded-lg text-xs resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-violet-600">Custom Instructions</label>
+              <textarea
+                value={form.personalityCustomInstructions}
+                onChange={e => setForm(prev => ({ ...prev, personalityCustomInstructions: e.target.value }))}
+                placeholder="Any additional instructions for how the agent should behave..."
+                rows={2}
+                className="w-full px-2 py-1.5 border border-violet-200 rounded-lg text-xs resize-none"
+              />
+            </div>
+
+            <details className="group">
+              <summary className="text-[11px] font-semibold text-violet-500 cursor-pointer hover:text-violet-700">
+                Advanced: Custom System Prompt (overrides all above)
+              </summary>
+              <div className="mt-2 space-y-1">
+                <textarea
+                  value={form.personalitySystemPrompt}
+                  onChange={e => setForm(prev => ({ ...prev, personalitySystemPrompt: e.target.value }))}
+                  placeholder="Write a full custom system prompt. If set, this replaces the auto-generated prompt (style, tone, goals, etc. are ignored). The browser task prefix will be appended automatically."
+                  rows={5}
+                  className="w-full px-2 py-1.5 border border-violet-200 rounded-lg text-xs resize-none font-mono"
+                />
+                <p className="text-[10px] text-violet-400">Leave empty to use the auto-generated prompt from settings above.</p>
+              </div>
+            </details>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

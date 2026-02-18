@@ -1,8 +1,7 @@
-import Store from 'electron-store';
+import type Store from 'electron-store';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { ChatOpenAI } from '@langchain/openai';
 import { AIMessage, HumanMessage, SystemMessage, type BaseMessage } from '@langchain/core/messages';
-import { getEncryptionKey } from '../../security.js';
 import type { AgentConfig, AgentTaskResult } from '../types.js';
 import type { BrowserRunner } from '../runners/BrowserRunner.js';
 
@@ -12,15 +11,11 @@ const RUN_TASK_PREFIX = '[[RUN_TASK]]:';
 type LangChainChat = ChatGoogleGenerativeAI | ChatOpenAI;
 
 export class TelegramLangChainAgent {
-  private store = new Store({
-    name: 'aether-hub-config',
-    encryptionKey: getEncryptionKey()
-  });
   private chat: LangChainChat | null = null;
   private currentProvider: string | null = null;
   private history = new Map<string, BaseMessage[]>();
 
-  constructor(private config: AgentConfig, private runner: BrowserRunner) {}
+  constructor(private config: AgentConfig, private runner: BrowserRunner, private store: Store) {}
 
   updateConfig(config: AgentConfig): void {
     this.config = config;
@@ -84,26 +79,83 @@ export class TelegramLangChainAgent {
   }
 
   private buildSystemPrompt(): string {
+    const p = this.config.personality;
     const name = this.config.name || 'Browser Agent';
-    return `You are ${name}, a Telegram-based browser automation assistant.
+
+    // If user provided a full custom system prompt, use it (with task prefix injected)
+    if (p?.systemPrompt?.trim()) {
+      return `${p.systemPrompt.trim()}
+
+IMPORTANT: When you need to perform a browser action, respond ONLY with:
+${RUN_TASK_PREFIX} <detailed browser task description>
+Never explain this prefix to the user.`;
+    }
+
+    const greeting = p?.greeting || `Hello! I'm ${name}. How can I help you today?`;
+    const style = p?.style || 'professional';
+    const tone = p?.tone || 'Helpful, concise, and accurate';
+    const language = p?.language || 'the same language as the user';
+    const responseLength = p?.responseLength || 'concise';
+    const useEmoji = p?.useEmoji ?? true;
+    const goals = (p?.goals || []).filter(Boolean);
+    const constraints = (p?.constraints || []).filter(Boolean);
+    const customInstructions = p?.customInstructions || '';
+
+    const lengthGuide = {
+      concise: 'Keep responses short and to the point (1-3 sentences).',
+      balanced: 'Provide moderately detailed responses (2-5 sentences).',
+      detailed: 'Give thorough, comprehensive responses with explanations.'
+    }[responseLength];
+
+    const styleGuide = {
+      professional: 'Maintain a professional, business-appropriate communication style.',
+      casual: 'Use a relaxed, conversational tone like chatting with a friend.',
+      technical: 'Use precise technical language and include relevant details.',
+      creative: 'Be expressive, use metaphors, and make responses engaging.',
+      friendly: 'Be warm, supportive, and encouraging in all interactions.',
+      custom: ''
+    }[style];
+
+    let prompt = `You are ${name}, a Telegram-based browser automation assistant.
 You can control a real browser to perform web tasks for the user.
 
-Rules:
-1. Respond in the same language as the user.
-2. When the user wants you to do something in the browser (navigate, click, search, check a website, etc.), respond ONLY with:
-${RUN_TASK_PREFIX} <detailed browser task description>
-3. For normal conversation or questions that don't need a browser, reply normally. Be concise.
-4. Never explain the ${RUN_TASK_PREFIX} prefix to the user. Just use it when appropriate.
+Personality:
+- Tone: ${tone}
+- Style: ${styleGuide}
+- ${lengthGuide}
+- ${useEmoji ? 'Use emoji naturally in responses to be expressive.' : 'Do not use emoji in responses.'}
+- Default greeting: "${greeting}"
 
-Examples:
+Rules:
+1. Always respond in ${language}.
+2. When the user wants you to do something in the browser (navigate, click, search, check a website, fill forms, etc.), respond ONLY with:
+${RUN_TASK_PREFIX} <detailed browser task description>
+3. For normal conversation or questions that don't need a browser, reply normally.
+4. Never explain the ${RUN_TASK_PREFIX} prefix to the user. Just use it when appropriate.`;
+
+    if (goals.length > 0) {
+      prompt += `\n\nYour Goals:\n${goals.map(g => `- ${g}`).join('\n')}`;
+    }
+
+    if (constraints.length > 0) {
+      prompt += `\n\nConstraints:\n${constraints.map(c => `- ${c}`).join('\n')}`;
+    }
+
+    if (customInstructions) {
+      prompt += `\n\nAdditional Instructions:\n${customInstructions}`;
+    }
+
+    prompt += `\n\nExamples:
 User: "check my revenue on apify"
 You: ${RUN_TASK_PREFIX} Go to apify.com, log in if needed, navigate to the billing/usage page, and report the current revenue/balance.
 
 User: "hello"
-You: Hello! How can I help you today?
+You: ${greeting}
 
 User: "open youtube and search for cats"
 You: ${RUN_TASK_PREFIX} Open youtube.com and search for "cats" in the search bar.`;
+
+    return prompt;
   }
 
   private async getChatModel(): Promise<LangChainChat> {

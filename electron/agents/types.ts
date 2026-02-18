@@ -1,10 +1,15 @@
 export type AgentStatus = 'stopped' | 'starting' | 'running' | 'paused' | 'error';
 
 export interface AgentPersonality {
-  style: 'professional' | 'casual' | 'technical' | 'creative' | 'custom';
+  style: 'professional' | 'casual' | 'technical' | 'creative' | 'friendly' | 'custom';
   tone: string;
+  language: string;
+  responseLength: 'concise' | 'balanced' | 'detailed';
+  useEmoji: boolean;
   goals: string[];
   constraints: string[];
+  greeting: string;
+  systemPrompt: string;
   customInstructions: string;
 }
 
