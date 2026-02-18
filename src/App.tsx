@@ -26,6 +26,7 @@ import AutomationsPage from './pages/Automations';
 import AutomationResultsPage from './pages/AutomationResults';
 import AIDeveloperPage from './pages/AIDeveloper';
 import AgentsPage from './pages/Agents';
+import BrowserAgentsPage from './pages/BrowserAgents';
 import InvoicingPage from './pages/Invoicing';
 import TitleBar from './components/TitleBar';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -65,6 +66,7 @@ import {
   PlayCircleIcon,
   BanknotesIcon,
   ReceiptPercentIcon,
+  ComputerDesktopIcon,
 } from '@heroicons/react/24/outline';
 import { UserIcon } from '@heroicons/react/24/solid';
 import { startWatchMonitor } from './services/watchMonitor';
@@ -464,6 +466,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             <SidebarLink to="/agents" icon={SparklesIcon} label="All Agents" badge="NEW" badgeColor="bg-purple-500" />
             <SidebarLink to="/chat" icon={ChatBubbleLeftRightIcon} label="Assistant" />
             <SidebarLink to="/automations" icon={PlayCircleIcon} label="Automations" badge="AI" badgeColor="bg-violet-500" />
+            <SidebarLink to="/browser-agents" icon={ComputerDesktopIcon} label="Browser Agents" badge="NEW" badgeColor="bg-slate-700" />
             <SidebarLink to="/ai-developer" icon={CommandLineIcon} label="AI Developer" badge="AI" badgeColor="bg-indigo-500" />
             <SidebarLink to="/youtube" icon={PlayCircleIcon} label="YouTube" badge="AI" badgeColor="bg-red-500" />
           </MenuGroup>
@@ -665,6 +668,7 @@ const App: React.FC = () => {
                   <Route path="/actions" element={<ActionsPage />} />
                   <Route path="/agents" element={<AgentsPage />} />
                   <Route path="/automations" element={<AutomationsPage />} />
+                  <Route path="/browser-agents" element={<BrowserAgentsPage />} />
                   <Route path="/automation-results" element={<AutomationResultsPage />} />
                   <Route path="/ai-developer" element={<AIDeveloperPage />} />
                   <Route path="/invoicing" element={<InvoicingPage />} />

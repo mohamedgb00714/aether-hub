@@ -23,7 +23,18 @@ import {
   deleteAutomation,
   createAutomationHistory,
   getAutomationHistory,
-  updateAutomationHistory
+  updateAutomationHistory,
+  createAgentTask,
+  getAgentTasks,
+  updateAgentTask,
+  deleteAgentTask,
+  getAgentTaskHistory,
+  createAgentTaskHistory,
+  updateAgentTaskHistory,
+  createAgentMemory,
+  getAgentMemories,
+  updateAgentMemory,
+  deleteAgentMemory
 } from './database.js';
 import * as whatsapp from './whatsapp.js';
 import * as telegram from './telegram.js';
@@ -35,9 +46,16 @@ import * as youtube from './youtube.js';
 import * as automationScheduler from './automation-scheduler.js';
 import { copilotService } from './copilot-service.js';
 import { getEncryptionKey } from './security.js';
+import { createAgentManager } from './agents/index.js';
+import { TelegramAuthCodeService } from './agents/comms/TelegramAuthCodeService.js';
+import { AgentScheduler } from './agents/scheduling/AgentScheduler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const telegramAuthCodes = new TelegramAuthCodeService();
+const agentManager = createAgentManager(telegramAuthCodes);
+const agentScheduler = new AgentScheduler(agentManager);
 
 // Initialize secure store with encryption
 // Note: safeStorage is used via getEncryptionKey()
@@ -4231,6 +4249,242 @@ ipcMain.handle('automation:analyzeResult', async (_, result: string, task: strin
   }
 });
 
+// ==================== AGENT IPC HANDLERS ====================
+
+ipcMain.handle('agent:getAll', async () => {
+  try {
+    return await agentManager.getAll();
+  } catch (error: any) {
+    console.error('❌ MAIN: agent:getAll failed:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('agent:getById', async (_event, id: string) => {
+  try {
+    return await agentManager.getById(id);
+  } catch (error: any) {
+    console.error('❌ MAIN: agent:getById failed:', error);
+    return null;
+  }
+});
+
+ipcMain.handle('agent:getAuthorizedChatIds', async (_event, id: string) => {
+  try {
+    return agentManager.getAuthorizedChatIds(id);
+  } catch (error: any) {
+    console.error('❌ MAIN: agent:getAuthorizedChatIds failed:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('agent:create', async (_event, config: any) => {
+  try {
+    return await agentManager.createAgent(config);
+  } catch (error: any) {
+    console.error('❌ MAIN: agent:create failed:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('agent:update', async (_event, id: string, updates: any) => {
+  try {
+    await agentManager.updateAgent(id, updates);
+    return { success: true };
+  } catch (error: any) {
+    console.error('❌ MAIN: agent:update failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('agent:delete', async (_event, id: string) => {
+  try {
+    await agentManager.deleteAgent(id);
+    return { success: true };
+  } catch (error: any) {
+    console.error('❌ MAIN: agent:delete failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('agent:start', async (_event, id: string) => {
+  try {
+    await agentManager.startAgent(id);
+    return { success: true };
+  } catch (error: any) {
+    console.error('❌ MAIN: agent:start failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('agent:stop', async (_event, id: string) => {
+  try {
+    await agentManager.stopAgent(id);
+    return { success: true };
+  } catch (error: any) {
+    console.error('❌ MAIN: agent:stop failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('agent:runTask', async (_event, id: string, task: string) => {
+  try {
+    const result = await agentManager.runTask(id, task);
+    return { success: true, result };
+  } catch (error: any) {
+    console.error('❌ MAIN: agent:runTask failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('agent:generateAuthCode', async (_event, agentId: string) => {
+  try {
+    const code = telegramAuthCodes.generate(agentId);
+    return { success: true, code };
+  } catch (error: any) {
+    console.error('❌ MAIN: agent:generateAuthCode failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.on('agent:event', (_event, event: any) => {
+  try {
+    agentManager.publishEvent(event);
+  } catch (error) {
+    console.warn('agent:event publish failed:', error);
+  }
+});
+
+ipcMain.handle('agentTasks:getAll', async (_event, agentId?: string) => {
+  try {
+    return getAgentTasks(agentId);
+  } catch (error: any) {
+    console.error('❌ MAIN: agentTasks:getAll failed:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('agentTasks:create', async (_event, task: any) => {
+  try {
+    const id = createAgentTask(task);
+    await agentScheduler.loadSchedules();
+    return { success: true, id };
+  } catch (error: any) {
+    console.error('❌ MAIN: agentTasks:create failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('agentTasks:update', async (_event, id: string, updates: any) => {
+  try {
+    updateAgentTask(id, updates);
+    await agentScheduler.loadSchedules();
+    return { success: true };
+  } catch (error: any) {
+    console.error('❌ MAIN: agentTasks:update failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('agentTasks:delete', async (_event, id: string) => {
+  try {
+    deleteAgentTask(id);
+    await agentScheduler.loadSchedules();
+    return { success: true };
+  } catch (error: any) {
+    console.error('❌ MAIN: agentTasks:delete failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('agentTasks:runNow', async (_event, id: string) => {
+  try {
+    await agentScheduler.runNow(id);
+    return { success: true };
+  } catch (error: any) {
+    console.error('❌ MAIN: agentTasks:runNow failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('agentTasks:getHistory', async (_event, taskId: string) => {
+  try {
+    return getAgentTaskHistory(taskId);
+  } catch (error: any) {
+    console.error('❌ MAIN: agentTasks:getHistory failed:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('agentTasks:createHistory', async (_event, history: any) => {
+  try {
+    const id = createAgentTaskHistory(history);
+    return { success: true, id };
+  } catch (error: any) {
+    console.error('❌ MAIN: agentTasks:createHistory failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('agentTasks:updateHistory', async (_event, id: string, updates: any) => {
+  try {
+    updateAgentTaskHistory(id, updates);
+    return { success: true };
+  } catch (error: any) {
+    console.error('❌ MAIN: agentTasks:updateHistory failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('agentTasks:reloadSchedules', async () => {
+  try {
+    await agentScheduler.loadSchedules();
+    return { success: true };
+  } catch (error: any) {
+    console.error('❌ MAIN: agentTasks:reloadSchedules failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('agentMemories:getAll', async (_event, agentId: string) => {
+  try {
+    return getAgentMemories(agentId);
+  } catch (error: any) {
+    console.error('❌ MAIN: agentMemories:getAll failed:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('agentMemories:create', async (_event, memory: any) => {
+  try {
+    const id = createAgentMemory(memory);
+    return { success: true, id };
+  } catch (error: any) {
+    console.error('❌ MAIN: agentMemories:create failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('agentMemories:update', async (_event, id: string, updates: any) => {
+  try {
+    updateAgentMemory(id, updates);
+    return { success: true };
+  } catch (error: any) {
+    console.error('❌ MAIN: agentMemories:update failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('agentMemories:delete', async (_event, id: string) => {
+  try {
+    deleteAgentMemory(id);
+    return { success: true };
+  } catch (error: any) {
+    console.error('❌ MAIN: agentMemories:delete failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // ==================== WHATSAPP IPC HANDLERS ====================
 
 // Initialize WhatsApp client and start QR code flow
@@ -4980,6 +5234,18 @@ app.whenReady().then(async () => {
   
   createWindow();
   startOAuthServer();
+
+  try {
+    await agentManager.initialize();
+    agentManager.setStatusHandler(summary => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('agent:status', summary);
+      }
+    });
+    await agentScheduler.loadSchedules();
+  } catch (error) {
+    console.error('❌ MAIN: Failed to initialize agent manager:', error);
+  }
   
   // Start browser addon WebSocket server
   if (mainWindow) {

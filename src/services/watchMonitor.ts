@@ -87,6 +87,20 @@ async function createWatchAction(
       source_content: sourceContent,
       source_message_ids: JSON.stringify(messageIds),
     });
+
+    if (api.agentEvents?.publish) {
+      api.agentEvents.publish({
+        id: `event_${Date.now()}`,
+        type: 'watch:action_created',
+        data: {
+          watchedItemId,
+          actionId: id,
+          title: action.title,
+          priority: action.priority
+        },
+        createdAt: new Date().toISOString()
+      });
+    }
     return true;
   } catch (error) {
     console.error('Failed to create watch action:', error);

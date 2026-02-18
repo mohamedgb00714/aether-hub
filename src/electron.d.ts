@@ -451,6 +451,39 @@ export interface ElectronAPI {
     execute: (config: any) => Promise<{ success: boolean; output?: string; error?: string; task?: string }>;
     onInstallProgress: (callback: (message: string) => void) => () => void;
   };
+  agent: {
+    getAll: () => Promise<any[]>;
+    getById: (id: string) => Promise<any | null>;
+    create: (config: any) => Promise<any>;
+    update: (id: string, updates: any) => Promise<{ success: boolean; error?: string }>;
+    delete: (id: string) => Promise<{ success: boolean; error?: string }>;
+    start: (id: string) => Promise<{ success: boolean; error?: string }>;
+    stop: (id: string) => Promise<{ success: boolean; error?: string }>;
+    runTask: (id: string, task: string) => Promise<{ success: boolean; result?: any; error?: string }>;
+    generateAuthCode: (agentId: string) => Promise<{ success: boolean; code?: string; error?: string }>;
+    getAuthorizedChatIds: (id: string) => Promise<string[]>;
+    onStatus: (callback: (summary: any) => void) => () => void;
+  };
+  agentEvents: {
+    publish: (event: any) => void;
+  };
+  agentTasks: {
+    getAll: (agentId?: string) => Promise<any[]>;
+    create: (task: any) => Promise<{ success: boolean; id?: string; error?: string }>;
+    update: (id: string, updates: any) => Promise<{ success: boolean; error?: string }>;
+    delete: (id: string) => Promise<{ success: boolean; error?: string }>;
+    runNow: (id: string) => Promise<{ success: boolean; error?: string }>;
+    getHistory: (taskId: string) => Promise<any[]>;
+    createHistory: (history: any) => Promise<{ success: boolean; id?: string; error?: string }>;
+    updateHistory: (id: string, updates: any) => Promise<{ success: boolean; error?: string }>;
+    reloadSchedules: () => Promise<{ success: boolean; error?: string }>;
+  };
+  agentMemories: {
+    getAll: (agentId: string) => Promise<any[]>;
+    create: (memory: any) => Promise<{ success: boolean; id?: string; error?: string }>;
+    update: (id: string, updates: any) => Promise<{ success: boolean; error?: string }>;
+    delete: (id: string) => Promise<{ success: boolean; error?: string }>;
+  };
 }
 
 declare global {

@@ -61,6 +61,79 @@ export interface DbEvent {
   created_at: string;
 }
 
+export interface DbBrowserAgent {
+  id: string;
+  name: string;
+  description: string | null;
+  profile_id: string;
+  telegram_bot_token: string | null;
+  telegram_chat_ids: string | null;
+  telegram_username: string | null;
+  telegram_auto_authorize: number;
+  personality: string;
+  browser_config: string;
+  execution_config: string;
+  status: string;
+  last_active: string | null;
+  error_message: string | null;
+  total_tasks_completed: number;
+  total_tasks_failed: number;
+  total_runtime_seconds: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbAgentTask {
+  id: string;
+  agent_id: string;
+  name: string;
+  description: string | null;
+  task: string;
+  cron_expression: string | null;
+  timezone: string | null;
+  enabled: number;
+  priority: string;
+  timeout: number;
+  retry_on_fail: number;
+  conditions: string | null;
+  depends_on: string | null;
+  last_run: string | null;
+  last_status: string | null;
+  next_run: string | null;
+  run_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbAgentTaskHistory {
+  id: string;
+  task_id: string;
+  agent_id: string;
+  status: string;
+  started_at: string | null;
+  completed_at: string | null;
+  duration_ms: number | null;
+  result: string | null;
+  error_message: string | null;
+  screenshot_path: string | null;
+  html_snapshot: string | null;
+  ai_summary: string | null;
+  created_at: string;
+}
+
+export interface DbAgentMemory {
+  id: string;
+  agent_id: string;
+  type: string;
+  content: string;
+  metadata: string | null;
+  website_domain: string | null;
+  importance: number;
+  use_count: number;
+  last_accessed: string | null;
+  created_at: string;
+}
+
 export interface DbFolder {
   id: string;
   name: string;
@@ -851,6 +924,101 @@ class DatabaseManager {
         analysis TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (automation_id) REFERENCES automations(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Browser Agents table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS browser_agents (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        profile_id TEXT NOT NULL,
+        telegram_bot_token TEXT,
+        telegram_chat_ids TEXT,
+        telegram_username TEXT,
+        telegram_auto_authorize INTEGER DEFAULT 1,
+        personality TEXT NOT NULL,
+        browser_config TEXT NOT NULL,
+        execution_config TEXT NOT NULL,
+        status TEXT DEFAULT 'stopped',
+        last_active TEXT,
+        error_message TEXT,
+        total_tasks_completed INTEGER DEFAULT 0,
+        total_tasks_failed INTEGER DEFAULT 0,
+        total_runtime_seconds INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Agent Tasks table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS agent_tasks (
+        id TEXT PRIMARY KEY,
+        agent_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        task TEXT NOT NULL,
+        cron_expression TEXT,
+        timezone TEXT DEFAULT 'UTC',
+        enabled INTEGER DEFAULT 1,
+        priority TEXT DEFAULT 'normal',
+        timeout INTEGER DEFAULT 300000,
+        retry_on_fail INTEGER DEFAULT 1,
+        conditions TEXT,
+        depends_on TEXT,
+        last_run TEXT,
+        last_status TEXT,
+        next_run TEXT,
+        run_count INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (agent_id) REFERENCES browser_agents(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Agent Task History table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS agent_task_history (
+        id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL,
+        agent_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        started_at TEXT,
+        completed_at TEXT,
+        duration_ms INTEGER,
+        result TEXT,
+        error_message TEXT,
+        screenshot_path TEXT,
+        html_snapshot TEXT,
+        ai_summary TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (task_id) REFERENCES agent_tasks(id) ON DELETE CASCADE,
+        FOREIGN KEY (agent_id) REFERENCES browser_agents(id) ON DELETE CASCADE
+      )
+    `);
+
+    try {
+      this.db.exec('ALTER TABLE browser_agents ADD COLUMN telegram_auto_authorize INTEGER DEFAULT 1');
+    } catch (_) {
+      // Column already exists
+    }
+
+    // Agent Memories table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS agent_memories (
+        id TEXT PRIMARY KEY,
+        agent_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        content TEXT NOT NULL,
+        metadata TEXT,
+        website_domain TEXT,
+        importance INTEGER DEFAULT 5,
+        use_count INTEGER DEFAULT 0,
+        last_accessed TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (agent_id) REFERENCES browser_agents(id) ON DELETE CASCADE
       )
     `);
 
@@ -4481,6 +4649,164 @@ export function createAutomationHistory(history: Omit<DbAutomationHistory, 'id' 
     history.analysis || null
   );
   return id;
+}
+
+// Agent Tasks exports
+export function createAgentTask(task: Omit<DbAgentTask, 'id' | 'created_at' | 'updated_at' | 'run_count' | 'last_run' | 'last_status' | 'next_run'>) {
+  const db = database['db'];
+  if (!db) throw new Error('Database not initialized');
+  const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+  db.prepare(`
+    INSERT INTO agent_tasks (
+      id, agent_id, name, description, task, cron_expression, timezone, enabled,
+      priority, timeout, retry_on_fail, conditions, depends_on
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    task.agent_id,
+    task.name,
+    task.description,
+    task.task,
+    task.cron_expression,
+    task.timezone || 'UTC',
+    task.enabled ?? 1,
+    task.priority || 'normal',
+    task.timeout || 300000,
+    task.retry_on_fail ?? 1,
+    task.conditions || null,
+    task.depends_on || null
+  );
+  return id;
+}
+
+export function getAgentTasks(agentId?: string): DbAgentTask[] {
+  const db = database['db'];
+  if (!db) throw new Error('Database not initialized');
+  if (agentId) {
+    return db.prepare('SELECT * FROM agent_tasks WHERE agent_id = ? ORDER BY created_at DESC').all(agentId) as DbAgentTask[];
+  }
+  return db.prepare('SELECT * FROM agent_tasks ORDER BY created_at DESC').all() as DbAgentTask[];
+}
+
+export function updateAgentTask(id: string, updates: Partial<DbAgentTask>) {
+  const db = database['db'];
+  if (!db) throw new Error('Database not initialized');
+  const fields: string[] = [];
+  const values: any[] = [];
+
+  Object.entries(updates).forEach(([key, value]) => {
+    fields.push(`${key} = ?`);
+    values.push(value);
+  });
+
+  if (!fields.length) return;
+  values.push(id);
+  db.prepare(`UPDATE agent_tasks SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
+}
+
+export function deleteAgentTask(id: string) {
+  const db = database['db'];
+  if (!db) throw new Error('Database not initialized');
+  db.prepare('DELETE FROM agent_tasks WHERE id = ?').run(id);
+}
+
+export function createAgentTaskHistory(history: Omit<DbAgentTaskHistory, 'id' | 'created_at'>) {
+  const db = database['db'];
+  if (!db) throw new Error('Database not initialized');
+  const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+  db.prepare(`
+    INSERT INTO agent_task_history (
+      id, task_id, agent_id, status, started_at, completed_at, duration_ms,
+      result, error_message, screenshot_path, html_snapshot, ai_summary
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    history.task_id,
+    history.agent_id,
+    history.status,
+    history.started_at,
+    history.completed_at,
+    history.duration_ms,
+    history.result,
+    history.error_message,
+    history.screenshot_path,
+    history.html_snapshot,
+    history.ai_summary
+  );
+  return id;
+}
+
+export function getAgentTaskHistory(taskId: string): DbAgentTaskHistory[] {
+  const db = database['db'];
+  if (!db) throw new Error('Database not initialized');
+  return db.prepare('SELECT * FROM agent_task_history WHERE task_id = ? ORDER BY created_at DESC').all(taskId) as DbAgentTaskHistory[];
+}
+
+export function updateAgentTaskHistory(id: string, updates: Partial<DbAgentTaskHistory>) {
+  const db = database['db'];
+  if (!db) throw new Error('Database not initialized');
+  const fields: string[] = [];
+  const values: any[] = [];
+
+  Object.entries(updates).forEach(([key, value]) => {
+    fields.push(`${key} = ?`);
+    values.push(value);
+  });
+
+  if (!fields.length) return;
+  values.push(id);
+  db.prepare(`UPDATE agent_task_history SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+}
+
+// Agent Memories exports
+export function createAgentMemory(memory: Omit<DbAgentMemory, 'id' | 'created_at' | 'use_count' | 'last_accessed'>) {
+  const db = database['db'];
+  if (!db) throw new Error('Database not initialized');
+  const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+  db.prepare(`
+    INSERT INTO agent_memories (
+      id, agent_id, type, content, metadata, website_domain, importance, use_count, last_accessed
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    memory.agent_id,
+    memory.type,
+    memory.content,
+    memory.metadata || null,
+    memory.website_domain || null,
+    memory.importance ?? 5,
+    0,
+    new Date().toISOString()
+  );
+  return id;
+}
+
+export function getAgentMemories(agentId: string): DbAgentMemory[] {
+  const db = database['db'];
+  if (!db) throw new Error('Database not initialized');
+  return db.prepare('SELECT * FROM agent_memories WHERE agent_id = ? ORDER BY created_at DESC').all(agentId) as DbAgentMemory[];
+}
+
+export function updateAgentMemory(id: string, updates: Partial<DbAgentMemory>) {
+  const db = database['db'];
+  if (!db) throw new Error('Database not initialized');
+  const fields: string[] = [];
+  const values: any[] = [];
+
+  Object.entries(updates).forEach(([key, value]) => {
+    fields.push(`${key} = ?`);
+    values.push(value);
+  });
+
+  if (!fields.length) return;
+  values.push(id);
+  db.prepare(`UPDATE agent_memories SET ${fields.join(', ')}, last_accessed = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
+}
+
+export function deleteAgentMemory(id: string) {
+  const db = database['db'];
+  if (!db) throw new Error('Database not initialized');
+  db.prepare('DELETE FROM agent_memories WHERE id = ?').run(id);
 }
 
 export function getAutomationHistory(automationId: string): DbAutomationHistory[] {

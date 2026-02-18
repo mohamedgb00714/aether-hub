@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Browser Agents foundation** 🤖 - SOLID-first backend architecture with agent manager, event bus, browser-use runner, and Telegram bot controller
+- **Browser Agents UI** - New page for creating, starting, and stopping persistent browser agents
+- **Agent IPC API** - New `agent:*` IPC endpoints with status push notifications to renderer
+- **Agent database tables** - Added `browser_agents`, `agent_tasks`, and `agent_task_history`
+- **Agent Scheduler** - Cron-based task scheduling with history tracking for agent tasks
+- **Agent Memory Service** - Memory CRUD support for learning context
+- **Skill Registry** - Extensible skill registry scaffolding for OCP compliance
+
+### Changed
+- **Watch monitor integration** - Watch actions now publish agent events for automation triggers
+
 ## [1.2.0] - 2026-02-15
 
 ### Added

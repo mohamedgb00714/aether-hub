@@ -559,6 +559,47 @@ contextBridge.exposeInMainWorld('electronAPI', {
     analyzeResult: (result: string, task: string) => ipcRenderer.invoke('automation:analyzeResult', result, task),
   },
 
+  agent: {
+    getAll: () => ipcRenderer.invoke('agent:getAll'),
+    getById: (id: string) => ipcRenderer.invoke('agent:getById', id),
+    create: (config: any) => ipcRenderer.invoke('agent:create', config),
+    update: (id: string, updates: any) => ipcRenderer.invoke('agent:update', id, updates),
+    delete: (id: string) => ipcRenderer.invoke('agent:delete', id),
+    start: (id: string) => ipcRenderer.invoke('agent:start', id),
+    stop: (id: string) => ipcRenderer.invoke('agent:stop', id),
+    runTask: (id: string, task: string) => ipcRenderer.invoke('agent:runTask', id, task),
+    generateAuthCode: (agentId: string) => ipcRenderer.invoke('agent:generateAuthCode', agentId),
+    getAuthorizedChatIds: (id: string) => ipcRenderer.invoke('agent:getAuthorizedChatIds', id),
+    onStatus: (callback: (summary: any) => void) => {
+      const handler = (_event: any, summary: any) => callback(summary);
+      ipcRenderer.on('agent:status', handler);
+      return () => ipcRenderer.removeListener('agent:status', handler);
+    }
+  },
+
+  agentEvents: {
+    publish: (event: any) => ipcRenderer.send('agent:event', event)
+  },
+
+  agentTasks: {
+    getAll: (agentId?: string) => ipcRenderer.invoke('agentTasks:getAll', agentId),
+    create: (task: any) => ipcRenderer.invoke('agentTasks:create', task),
+    update: (id: string, updates: any) => ipcRenderer.invoke('agentTasks:update', id, updates),
+    delete: (id: string) => ipcRenderer.invoke('agentTasks:delete', id),
+    runNow: (id: string) => ipcRenderer.invoke('agentTasks:runNow', id),
+    getHistory: (taskId: string) => ipcRenderer.invoke('agentTasks:getHistory', taskId),
+    createHistory: (history: any) => ipcRenderer.invoke('agentTasks:createHistory', history),
+    updateHistory: (id: string, updates: any) => ipcRenderer.invoke('agentTasks:updateHistory', id, updates),
+    reloadSchedules: () => ipcRenderer.invoke('agentTasks:reloadSchedules')
+  },
+
+  agentMemories: {
+    getAll: (agentId: string) => ipcRenderer.invoke('agentMemories:getAll', agentId),
+    create: (memory: any) => ipcRenderer.invoke('agentMemories:create', memory),
+    update: (id: string, updates: any) => ipcRenderer.invoke('agentMemories:update', id, updates),
+    delete: (id: string) => ipcRenderer.invoke('agentMemories:delete', id)
+  },
+
   // Discord Selfbot operations (Read-Only)
   // ⚠️ WARNING: Self-bot usage violates Discord TOS
   discordSelfBot: {
