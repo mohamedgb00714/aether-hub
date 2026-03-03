@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.4.0] - 2026-03-03
+
 ### Added
 - **Browser Agents foundation** 🤖 - SOLID-first backend architecture with agent manager, event bus, browser-use runner, and Telegram bot controller
 - **Browser Agents UI** - New page for creating, starting, and stopping persistent browser agents
@@ -15,9 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Agent Scheduler** - Cron-based task scheduling with history tracking for agent tasks
 - **Agent Memory Service** - Memory CRUD support for learning context
 - **Skill Registry** - Extensible skill registry scaffolding for OCP compliance
+- **Google token keep-alive** 🔑 - Proactive refresh every 5 days to prevent 6-month inactivity expiry; warns when approaching Google Cloud Testing mode 7-day limit
 
 ### Changed
 - **Watch monitor integration** - Watch actions now publish agent events for automation triggers
+
+### Fixed
+- `storage is not defined` error in `autoSync.ts` `checkGmailConnectivity` — missing `electronStore` import
+- Google OAuth refresh token expiring silently when app is closed for extended periods
 
 ## [1.2.0] - 2026-02-15
 
@@ -106,7 +115,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/mohamedgb00714/aether-hub/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/mohamedgb00714/aether-hub/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/mohamedgb00714/aether-hub/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/mohamedgb00714/aether-hub/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/mohamedgb00714/aether-hub/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/mohamedgb00714/aether-hub/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/mohamedgb00714/aether-hub/releases/tag/v1.0.0

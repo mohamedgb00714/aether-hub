@@ -144,6 +144,7 @@ export const STORAGE_KEYS = {
   // Account credentials
   GOOGLE_CREDENTIALS: 'google_credentials',
   GOOGLE_TOKENS: 'google_tokens', // OAuth access/refresh tokens
+  GOOGLE_TOKEN_LAST_REFRESH: 'google_token_last_refresh', // Timestamp of last successful token refresh
   OUTLOOK_CREDENTIALS: 'outlook_credentials',
   FACEBOOK_CREDENTIALS: 'facebook_credentials',
   SLACK_CREDENTIALS: 'slack_credentials',

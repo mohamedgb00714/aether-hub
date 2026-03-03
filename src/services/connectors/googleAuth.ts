@@ -227,6 +227,51 @@ export async function refreshAccessToken(refreshToken: string): Promise<GoogleTo
  * Get valid access token (refreshes if expired)
  * Updated to check database if global storage is empty
  */
+/**
+ * Proactively keep the Google refresh token alive by using it every few days.
+ * This prevents the 6-month inactivity expiry from Google.
+ * For apps in Google Cloud "Testing" mode, tokens expire after 7 days regardless —
+ * publishing the OAuth consent screen to "In production" is the real fix for that.
+ */
+export async function keepGoogleTokenAlive(): Promise<void> {
+  try {
+    const tokens = await storage.get(STORAGE_KEYS.GOOGLE_TOKENS) as GoogleTokens | null;
+    if (!tokens?.refresh_token) return;
+
+    const lastRefresh = await storage.get(STORAGE_KEYS.GOOGLE_TOKEN_LAST_REFRESH) as number | null;
+    const now = Date.now();
+    const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+    const SIX_DAYS_MS = 6 * 24 * 60 * 60 * 1000;
+
+    // Warn if we're approaching the 7-day testing-mode expiry
+    if (lastRefresh && (now - lastRefresh) > SIX_DAYS_MS) {
+      console.warn(
+        '⚠️ Google token has not been refreshed in 6+ days. ' +
+        'If your OAuth app is in "Testing" mode, the refresh token will expire at 7 days. ' +
+        'Go to Google Cloud Console → OAuth consent screen → publish to "In production" to fix this.'
+      );
+    }
+
+    // Proactively refresh if it has been more than 5 days since the last refresh
+    if (!lastRefresh || (now - lastRefresh) > FIVE_DAYS_MS) {
+      console.log('🔑 Proactive Google token keep-alive refresh...');
+      try {
+        await refreshAccessToken(tokens.refresh_token);
+        await storage.set(STORAGE_KEYS.GOOGLE_TOKEN_LAST_REFRESH, now);
+        console.log('✅ Google token keep-alive refresh successful');
+      } catch (err) {
+        // refreshAccessToken already handles logging and storage cleanup on invalid_grant
+        console.error('❌ Token keep-alive refresh failed:', err);
+      }
+    } else {
+      const daysAgo = Math.floor((now - lastRefresh) / (24 * 60 * 60 * 1000));
+      console.log(`🔑 Google token keep-alive: last refreshed ${daysAgo} day(s) ago, no action needed`);
+    }
+  } catch (err) {
+    console.warn('⚠️ keepGoogleTokenAlive error:', err);
+  }
+}
+
 export async function getValidAccessToken(): Promise<string | null> {
   let tokens = await storage.get(STORAGE_KEYS.GOOGLE_TOKENS) as GoogleTokens | null;
   

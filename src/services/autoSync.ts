@@ -5,6 +5,7 @@
  */
 
 import { db } from './database';
+import storage, { STORAGE_KEYS } from './electronStore';
 import { syncOutlookAccount } from './connectors/outlookAuth';
 import { syncSlackAccount } from './connectors/slackAuth';
 import { syncGitHubAccount } from './connectors/githubConnector';
@@ -18,8 +19,10 @@ import type { Email, CalendarEvent } from '../types';
 
 const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
 const SYNC_TIMEOUT = 4 * 60 * 1000; // 4 minutes timeout (less than sync interval)
+const TOKEN_KEEPALIVE_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
 
 let syncIntervalId: NodeJS.Timeout | null = null;
+let tokenKeepaliveIntervalId: NodeJS.Timeout | null = null;
 let isSyncing = false;
 let syncStartTime: number | null = null;
 
@@ -376,6 +379,22 @@ export function startAutoSync(): void {
   initNotificationService().catch(err => {
     console.error('❌ Failed to initialize notification service:', err);
   });
+
+  // Proactively keep Google token alive on startup, then every 24h
+  // This prevents the 6-month inactivity expiry (and warns about the 7-day testing-mode limit)
+  import('./connectors/googleAuth').then(({ keepGoogleTokenAlive }) => {
+    // Run once shortly after startup
+    setTimeout(() => {
+      keepGoogleTokenAlive();
+    }, 5000);
+
+    // Then repeat every 24 hours while the app is open
+    tokenKeepaliveIntervalId = setInterval(() => {
+      keepGoogleTokenAlive();
+    }, TOKEN_KEEPALIVE_INTERVAL);
+  }).catch(err => {
+    console.error('❌ Failed to set up Google token keep-alive:', err);
+  });
   
   // Check Gmail connectivity immediately on startup
   setTimeout(() => {
@@ -398,6 +417,10 @@ export function stopAutoSync(): void {
     clearInterval(syncIntervalId);
     syncIntervalId = null;
     console.log('🔄 Auto-sync stopped');
+  }
+  if (tokenKeepaliveIntervalId) {
+    clearInterval(tokenKeepaliveIntervalId);
+    tokenKeepaliveIntervalId = null;
   }
 }
 
